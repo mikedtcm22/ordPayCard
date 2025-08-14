@@ -1,17 +1,14 @@
 /**
- * Order-preserving deduplication of txid strings.
+ * Order-preserving deduplication of txid strings using a Map.
+ * Map enables easy extension to counts/metadata later without changing structure.
  * Always returns a new array instance.
  */
 export function dedupeTxids(txids: string[]): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
+  const map = new Map<string, true>();
   for (const id of txids) {
-    if (!seen.has(id)) {
-      seen.add(id);
-      result.push(id);
-    }
+    if (!map.has(id)) map.set(id, true);
   }
-  return result;
+  return Array.from(map.keys());
 }
 
 
