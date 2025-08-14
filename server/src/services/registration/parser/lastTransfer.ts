@@ -9,6 +9,9 @@
  *
  * Fail-closed: returns null on missing metadata, malformed satpoint/location,
  * unconfirmed tx, missing height, or dependency errors.
+ *
+ * Note: the in-file cache will be replaced by a shared TTL cache utility when
+ * additional callers are added (Status API, A3 orchestration).
  */
 
 import type { LastTransferDeps } from './types';

@@ -14,4 +14,6 @@ export interface ParsedOpReturnPayload {
   expiryBlock: number;
 }
 
+export type SupportedNetwork = 'regtest' | 'signet' | 'testnet' | 'mainnet';
+
 

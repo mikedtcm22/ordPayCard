@@ -1,10 +1,9 @@
-import { networks, payments, address, Transaction, initEccLib } from 'bitcoinjs-lib';
+import { networks, payments, address, Transaction } from 'bitcoinjs-lib';
 import { ECPairFactory } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 import { sumOutputsToAddress } from '../sumToCreator';
 
 const ECPair = ECPairFactory(ecc);
-initEccLib(ecc);
 
 function makeKeyPair() {
   return ECPair.makeRandom({ network: networks.testnet });

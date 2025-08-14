@@ -1,11 +1,18 @@
 import { Transaction, address, networks, Network } from 'bitcoinjs-lib';
-
-export type SupportedNetwork = 'regtest' | 'testnet' | 'mainnet';
+import type { SupportedNetwork } from './types';
 
 function getBitcoinjsNetwork(net: SupportedNetwork): Network {
-  if (net === 'mainnet') return networks.bitcoin;
-  // Treat regtest as testnet for address/script encoding purposes here
-  return networks.testnet;
+  switch (net) {
+    case 'mainnet':
+      return networks.bitcoin;
+    case 'testnet':
+    case 'signet':
+    case 'regtest':
+      return networks.testnet;
+    default:
+      // Exhaustive guard
+      throw new Error(`Unsupported network: ${String(net)}`);
+  }
 }
 
 /**
