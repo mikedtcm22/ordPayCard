@@ -11,18 +11,34 @@
  * - Sum all outputs that pay to `creatorAddr`; return 0n when below `minFee`
  */
 
-import type { SupportedNetwork } from './types';
+import type { VerifyPaymentOptions } from './types';
 import { parseOpReturn, isExpired } from './opReturn';
 import { sumOutputsToAddress } from './sumToCreator';
 
-export interface VerifyPaymentOptions {
-  currentBlock: number;
-  network: SupportedNetwork;
-  minBlock?: number;
-  /** Optional: height of the tx's block when known (used for minBlock gating) */
-  txBlockHeight?: number;
-  /** Optional fetcher for tx hex when a txid is provided (not used in current tests) */
-  fetchTx?: (txid: string) => Promise<string>;
+function isHex(s: string): boolean {
+  return /^[0-9a-fA-F]+$/.test(s) && s.length % 2 === 0;
+}
+
+function isTxid(s: string): boolean {
+  return /^[0-9a-fA-F]{64}$/.test(s);
+}
+
+async function resolveRawTxHex(txhexOrId: string, opts: VerifyPaymentOptions): Promise<string | null> {
+  if (isHex(txhexOrId)) return txhexOrId;
+  if (isTxid(txhexOrId) && opts.fetchTx) {
+    const p = opts.fetchTx(txhexOrId);
+    if (opts.withTimeout && typeof opts.fetchTimeoutMs === 'number') {
+      return await opts.withTimeout(p, opts.fetchTimeoutMs);
+    }
+    return await p;
+  }
+  return null;
+}
+
+function passesBlockGate(txBlockHeight: unknown, minBlock: unknown): boolean {
+  if (typeof minBlock !== 'number') return true;
+  if (typeof txBlockHeight !== 'number') return false;
+  return txBlockHeight >= minBlock;
 }
 
 export async function verifyPayment(
@@ -33,13 +49,8 @@ export async function verifyPayment(
   opts: VerifyPaymentOptions,
 ): Promise<bigint> {
   // Acquire raw tx hex. Current tests supply hex directly.
-  let rawTxHex = txhexOrId;
-  if (!/^[0-9a-fA-F]+$/.test(rawTxHex) || rawTxHex.length % 2 !== 0) {
-    // Treat as txid if looks like 64-hex; fetch if fetcher provided
-    const isTxid = /^[0-9a-fA-F]{64}$/.test(txhexOrId);
-    if (!isTxid || !opts.fetchTx) return 0n;
-    rawTxHex = await opts.fetchTx(txhexOrId);
-  }
+  const rawTxHex = await resolveRawTxHex(txhexOrId, opts);
+  if (!rawTxHex) return 0n;
 
   // Parse OP_RETURN and enforce binding
   const parsed = parseOpReturn(rawTxHex);
@@ -48,10 +59,7 @@ export async function verifyPayment(
   if (isExpired(parsed.expiryBlock, opts.currentBlock)) return 0n;
 
   // Optional block gating relative to last transfer height
-  if (typeof opts.minBlock === 'number') {
-    const feeTxHeight = opts.txBlockHeight;
-    if (typeof feeTxHeight !== 'number' || feeTxHeight < opts.minBlock) return 0n;
-  }
+  if (!passesBlockGate(opts.txBlockHeight, opts.minBlock)) return 0n;
 
   // Sum outputs paying to the creator
   const sumToCreator = sumOutputsToAddress(rawTxHex, creatorAddr, opts.network);
