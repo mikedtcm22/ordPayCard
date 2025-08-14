@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  client-dev:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:3001/api
+      - VITE_REGISTRY_API_URL=http://localhost:3001/api/registration
+      - VITE_BITCOIN_NETWORK=testnet
+      - VITE_DEV_MODE=true
+    depends_on:
+      - server-dev
+    networks:
+      - satspray-dev-network
+
+  server-dev:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - BITCOIN_NETWORK=testnet
+      - ORDINALS_API_URL=https://api.hiro.so
+      - REGISTRY_API_URL=http://localhost:3001/api/registration
+      - CREATOR_WALLET=tb1qexamplecreatoraddressxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      - REGISTRATION_FEE_SATS=50000
+      - JWT_SECRET=dev-secret-change-in-production
+    networks:
+      - satspray-dev-network
+
+networks:
+  satspray-dev-network:
+    driver: bridge 

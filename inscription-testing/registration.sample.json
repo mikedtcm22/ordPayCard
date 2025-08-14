@@ -1,0 +1,8 @@
+{
+  "schema": "buyer_registration.v1",
+  "parent": "REPLACE_WITH_PARENT_ID",
+  "paid_to": "tb1qexamplecreatoraddressxxxxxxxxxxxxxxxxxxxxxx",
+  "fee_sats": 50000,
+  "txid": "REPLACE_WITH_FEE_TXID",
+  "timestamp": "2025-08-09T00:00:00Z"
+}

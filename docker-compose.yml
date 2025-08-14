@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:3001
+      - VITE_BITCOIN_NETWORK=testnet
+    depends_on:
+      - server
+    networks:
+      - satspray-network
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - BITCOIN_NETWORK=testnet
+      - ORDINALS_API_URL=https://api.hiro.so
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
+      - TREASURY_ADDRESS=${TREASURY_ADDRESS:-}
+    volumes:
+      - ./data:/app/data
+    networks:
+      - satspray-network
+    healthcheck:
+      test: ["CMD", "node", "--eval", "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  satspray-network:
+    driver: bridge
+
+volumes:
+  satspray-data:
+    driver: local 

@@ -1,0 +1,49 @@
+// Fix for @ordzaar/ord-connect package export issues
+// This file provides a workaround for the malformed package.json exports
+
+let OrdConnectKit: any;
+let OrdConnectProvider: any;
+let useOrdConnect: any;
+
+// Dynamic import with fallback
+const loadOrdConnect = async () => {
+  try {
+    // Try standard import first
+    const module = await import('@ordzaar/ord-connect');
+    return module;
+  } catch (error) {
+    console.warn('Standard import failed, trying direct path import');
+    try {
+      // Try direct path import as fallback
+      const module = await import('@ordzaar/ord-connect/dist/index.js');
+      return module;
+    } catch (fallbackError) {
+      console.error('Failed to load ord-connect:', fallbackError);
+      throw new Error('Could not load ord-connect module');
+    }
+  }
+};
+
+// Initialize the module
+export const initOrdConnect = async () => {
+  try {
+    const module = await loadOrdConnect();
+    OrdConnectKit = module.OrdConnectKit || module.default?.OrdConnectKit;
+    OrdConnectProvider = module.OrdConnectProvider || module.default?.OrdConnectProvider;
+    useOrdConnect = module.useOrdConnect || module.default?.useOrdConnect;
+    
+    if (!OrdConnectKit || !OrdConnectProvider || !useOrdConnect) {
+      throw new Error('Required exports not found in ord-connect module');
+    }
+    
+    return { OrdConnectKit, OrdConnectProvider, useOrdConnect };
+  } catch (error) {
+    console.error('Failed to initialize ord-connect:', error);
+    throw error;
+  }
+};
+
+// Export getters that will be populated after initialization
+export const getOrdConnectKit = () => OrdConnectKit;
+export const getOrdConnectProvider = () => OrdConnectProvider;
+export const getUseOrdConnect = () => useOrdConnect;

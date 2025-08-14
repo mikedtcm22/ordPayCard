@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inscription Balance Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-case { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        .pass { color: green; }
+        .fail { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Inscription Template Balance Calculation Tests</h1>
+    
+    <div class="test-case">
+        <h2>Test 1: Fresh Top-up (100,000 sats, no decay)</h2>
+        <iframe id="test1" src="/templates/inscription/membershipCard.html" width="450" height="450"></iframe>
+        <div id="result1"></div>
+    </div>
+
+    <div class="test-case">
+        <h2>Test 2: Partial Decay (100,000 sats, 100 blocks decay)</h2>
+        <iframe id="test2" src="/templates/inscription/membershipCard.html" width="450" height="450"></iframe>
+        <div id="result2"></div>
+    </div>
+
+    <div class="test-case">
+        <h2>Test 3: Multiple Receipts</h2>
+        <iframe id="test3" src="/templates/inscription/membershipCard.html" width="450" height="450"></iframe>
+        <div id="result3"></div>
+    </div>
+
+    <div class="test-case">
+        <h2>Test 4: Expired Card (fully decayed)</h2>
+        <iframe id="test4" src="/templates/inscription/membershipCard.html" width="450" height="450"></iframe>
+        <div id="result4"></div>
+    </div>
+
+    <script>
+        // Test configurations
+        const tests = [
+            {
+                id: 'test1',
+                currentBlock: 850000,
+                receipts: [{
+                    schema: 'satspray.topup.v1',
+                    parent: 'test_inscription_id',
+                    amount: 100000,
+                    block: 850000,
+                    paid_to: 'tb1q...',
+                    txid: 'test_txid'
+                }],
+                expectedBalance: 100000,
+                expectedStatus: 'ACTIVE'
+            },
+            {
+                id: 'test2',
+                currentBlock: 850100,
+                receipts: [{
+                    schema: 'satspray.topup.v1',
+                    parent: 'test_inscription_id',
+                    amount: 100000,
+                    block: 850000,
+                    paid_to: 'tb1q...',
+                    txid: 'test_txid'
+                }],
+                expectedBalance: 96500, // 100000 - (100 * 35)
+                expectedStatus: 'ACTIVE'
+            },
+            {
+                id: 'test3',
+                currentBlock: 850100,
+                receipts: [
+                    {
+                        schema: 'satspray.topup.v1',
+                        parent: 'test_inscription_id',
+                        amount: 100000,
+                        block: 850000,
+                        paid_to: 'tb1q...',
+                        txid: 'test_txid_1'
+                    },
+                    {
+                        schema: 'satspray.topup.v1',
+                        parent: 'test_inscription_id',
+                        amount: 50000,
+                        block: 850050,
+                        paid_to: 'tb1q...',
+                        txid: 'test_txid_2'
+                    }
+                ],
+                expectedBalance: 146500, // (100000 - 100*35) + (50000 - 50*35)
+                expectedStatus: 'ACTIVE'
+            },
+            {
+                id: 'test4',
+                currentBlock: 853000,
+                receipts: [{
+                    schema: 'satspray.topup.v1',
+                    parent: 'test_inscription_id',
+                    amount: 100000,
+                    block: 850000,
+                    paid_to: 'tb1q...',
+                    txid: 'test_txid'
+                }],
+                expectedBalance: 0, // 100000 - (3000 * 35) = -5000 -> 0
+                expectedStatus: 'EXPIRED'
+            }
+        ];
+
+        // Run tests after iframes load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                tests.forEach((test, index) => {
+                    const iframe = document.getElementById(test.id);
+                    const resultDiv = document.getElementById(`result${index + 1}`);
+                    
+                    try {
+                        // Inject test data
+                        iframe.contentWindow.CURRENT_BLOCK = test.currentBlock;
+                        iframe.contentWindow.RECEIPTS = test.receipts;
+                        
+                        // Call cardStatus
+                        const status = iframe.contentWindow.cardStatus();
+                        
+                        // Check results
+                        const balanceMatch = status.balance === test.expectedBalance;
+                        const statusMatch = status.status === test.expectedStatus;
+                        
+                        resultDiv.innerHTML = `
+                            <p>Expected Balance: ${test.expectedBalance} sats</p>
+                            <p>Actual Balance: ${status.balance} sats</p>
+                            <p>Balance Test: <span class="${balanceMatch ? 'pass' : 'fail'}">${balanceMatch ? 'PASS' : 'FAIL'}</span></p>
+                            <p>Expected Status: ${test.expectedStatus}</p>
+                            <p>Actual Status: ${status.status}</p>
+                            <p>Status Test: <span class="${statusMatch ? 'pass' : 'fail'}">${statusMatch ? 'PASS' : 'FAIL'}</span></p>
+                            <p>Blocks Remaining: ${status.blocksRemaining}</p>
+                        `;
+                    } catch (error) {
+                        resultDiv.innerHTML = `<p class="fail">Error: ${error.message}</p>`;
+                    }
+                });
+            }, 2000); // Wait for iframes to fully load
+        });
+    </script>
+</body>
+</html>

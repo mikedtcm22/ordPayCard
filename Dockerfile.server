@@ -1,0 +1,40 @@
+# Server Dockerfile for production build
+FROM node:18-alpine AS base
+
+# Set working directory
+WORKDIR /app
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Copy package files
+COPY server/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Create app user for security
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S app -u 1001
+
+# Copy source code and build
+COPY server/ .
+RUN npm run build
+
+# Remove dev dependencies
+RUN npm prune --production
+
+# Change ownership
+RUN chown -R app:nodejs /app
+USER app
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node --eval "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# Start application
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/index.js"] 

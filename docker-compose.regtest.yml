@@ -1,0 +1,49 @@
+services:
+  bitcoin:
+    image: bitcoin/bitcoin:28.1
+    command:
+      - -regtest=1
+      - -server=1
+      - -txindex=1
+      - -listen=1
+      - -rpcallowip=0.0.0.0/0
+      - -rpcbind=0.0.0.0
+      - -fallbackfee=0.0002
+    ports:
+      - "18443:18443"  # RPC
+    volumes:
+      - bitcoin-data:/home/bitcoin/.bitcoin
+    healthcheck:
+      test: ["CMD-SHELL", "bitcoin-cli -regtest -rpccookiefile=/home/bitcoin/.bitcoin/regtest/.cookie getblockchaininfo >/dev/null 2>&1 || exit 1"]
+      interval: 1s
+      timeout: 5s
+      retries: 300
+
+  ord:
+    build:
+      context: .
+      dockerfile: inscription-testing/ord.Dockerfile
+    depends_on:
+      bitcoin:
+        condition: service_healthy
+    command: ["--regtest", "--cookie-file", "/root/.bitcoin/regtest/.cookie", "--bitcoin-rpc-url", "http://bitcoin:18443", "server", "--http-port", "8080"]
+    environment:
+      - ORD_BITCOIN_RPC_COOKIE=/root/.bitcoin/regtest/.cookie
+      - ORD_BITCOIN_RPC_URL=http://bitcoin:18443
+      - ORD_SERVER_URL=http://127.0.0.1:8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/workspace
+      - ord-data:/root/.ord
+      - bitcoin-data:/root/.bitcoin
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/r/blockheight"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  bitcoin-data:
+  ord-data:
+

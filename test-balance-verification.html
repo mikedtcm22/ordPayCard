@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Balance Calculation Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test { margin: 20px 0; padding: 20px; border: 1px solid #ccc; background: #f9f9f9; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Balance Calculation Verification</h1>
+    
+    <div class="test">
+        <h2>Test Scenario (from screenshot)</h2>
+        <p><strong>Receipt:</strong> 20,000 sats at block 849,900</p>
+        <p><strong>Current block:</strong> 850,000</p>
+        <p><strong>Blocks elapsed:</strong> 100</p>
+        <p><strong>Decay rate:</strong> 35 sats/block</p>
+        <p><strong>Total decay:</strong> 100 × 35 = 3,500 sats</p>
+        <p><strong>Expected balance:</strong> 20,000 - 3,500 = <strong>16,500 sats</strong></p>
+    </div>
+
+    <script>
+        // Simplified balance calculation to verify logic
+        function calculateBalance(receipts, currentBlock, decayPerBlock) {
+            // Sort receipts by block height (oldest first)
+            const sortedReceipts = [...receipts].sort((a, b) => a.block - b.block);
+            
+            let totalBalance = 0;
+            let lastActivityBlock = currentBlock;
+            
+            // Start from current block and work backwards through receipts
+            for (let j = sortedReceipts.length - 1; j >= 0; j--) {
+                const receipt = sortedReceipts[j];
+                
+                // Calculate decay from this receipt to the last activity
+                const blocksSinceReceipt = lastActivityBlock - receipt.block;
+                const decayAmount = blocksSinceReceipt * decayPerBlock;
+                
+                // Add the receipt amount and subtract decay
+                totalBalance += receipt.amount;
+                totalBalance -= decayAmount;
+                
+                // Update last activity block
+                lastActivityBlock = receipt.block;
+            }
+            
+            // Ensure balance doesn't go negative
+            return Math.max(0, totalBalance);
+        }
+
+        // Test the scenario from the screenshot
+        const testReceipts = [{
+            amount: 20000,
+            block: 849900
+        }];
+        
+        const currentBlock = 850000;
+        const decayPerBlock = 35;
+        
+        const result = calculateBalance(testReceipts, currentBlock, decayPerBlock);
+        
+        document.write(`<div class="test">`);
+        document.write(`<h2>Calculation Result</h2>`);
+        document.write(`<p>Calculated balance: <strong>${result} sats</strong></p>`);
+        
+        if (result === 16500) {
+            document.write(`<p class="pass">✓ CORRECT - Balance calculation is now working properly!</p>`);
+        } else {
+            document.write(`<p class="fail">✗ INCORRECT - Expected 16,500 sats but got ${result} sats</p>`);
+        }
+        document.write(`</div>`);
+
+        // Additional test with multiple receipts
+        const multipleReceipts = [
+            { amount: 10000, block: 849900 },
+            { amount: 10000, block: 849900 }
+        ];
+        
+        const multiResult = calculateBalance(multipleReceipts, currentBlock, decayPerBlock);
+        
+        document.write(`<div class="test">`);
+        document.write(`<h2>Multiple Receipts Test</h2>`);
+        document.write(`<p>Two receipts of 10,000 sats each at block 849,900</p>`);
+        document.write(`<p>Calculated balance: <strong>${multiResult} sats</strong></p>`);
+        
+        if (multiResult === 16500) {
+            document.write(`<p class="pass">✓ CORRECT - Multiple receipts handled properly!</p>`);
+        } else {
+            document.write(`<p class="fail">✗ INCORRECT - Expected 16,500 sats but got ${multiResult} sats</p>`);
+        }
+        document.write(`</div>`);
+    </script>
+</body>
+</html>

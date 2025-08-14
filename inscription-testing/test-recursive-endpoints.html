@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Recursive Endpoint Test Harness</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        .test-control {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #0f0;
+            background: #000;
+        }
+        .test-output {
+            padding: 20px;
+            border: 1px solid #0f0;
+            background: #000;
+            height: 400px;
+            overflow-y: auto;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        button:hover {
+            background: #0a0;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #0f0;
+        }
+        .error {
+            color: #f00;
+            border-left-color: #f00;
+        }
+        .success {
+            color: #0f0;
+            border-left-color: #0f0;
+        }
+        .info {
+            color: #ff0;
+            border-left-color: #ff0;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #0f0;
+            margin-top: 20px;
+        }
+        input[type="text"], input[type="number"] {
+            background: #111;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 5px;
+            margin: 5px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Recursive Inscription Test Harness</h1>
+    
+    <div class="test-control">
+        <h2>Mock Configuration</h2>
+        <div>
+            <label>Inscription ID: <input type="text" id="inscriptionId" value="test123i0" /></label>
+        </div>
+        <div>
+            <label>Treasury Address: <input type="text" id="treasuryAddr" value="tb1qtest123" style="width: 300px;" /></label>
+        </div>
+        <div>
+            <label>Current Block: <input type="number" id="currentBlock" value="850000" /></label>
+        </div>
+        <div>
+            <label>Decay Per Block: <input type="number" id="decayPerBlock" value="100" /></label>
+        </div>
+        
+        <h3>Receipt Configuration</h3>
+        <div id="receiptConfig">
+            <div class="receipt-item">
+                Receipt 1: 
+                <input type="number" placeholder="Amount" id="receipt1Amount" value="100000" />
+                <input type="number" placeholder="Block" id="receipt1Block" value="849900" />
+                <label style="margin-left: 10px;">
+                    <input type="checkbox" id="receipt1DuplicateTxid" /> Use same txid as Receipt 2
+                </label>
+            </div>
+            <div class="receipt-item">
+                Receipt 2: 
+                <input type="number" placeholder="Amount" id="receipt2Amount" value="50000" />
+                <input type="number" placeholder="Block" id="receipt2Block" value="849950" />
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="updateMockData()">Update Mock Data</button>
+            <button onclick="reloadInscription()">Reload Inscription</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+            <button onclick="testCardStatus()">Test cardStatus()</button>
+        </div>
+    </div>
+    
+    <div class="test-output" id="testOutput">
+        <div class="log-entry info">Test harness initialized. Configure mock data and click "Reload Inscription".</div>
+    </div>
+    
+    <iframe id="inscriptionFrame" srcdoc=""></iframe>
+    
+    <script>
+        // Logging function
+        function log(message, type = 'info') {
+            const output = document.getElementById('testOutput');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + message;
+            output.appendChild(entry);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function clearLogs() {
+            document.getElementById('testOutput').innerHTML = '';
+            log('Logs cleared', 'info');
+        }
+        
+        // Update mock data based on UI inputs
+        function updateMockData() {
+            const inscriptionId = document.getElementById('inscriptionId').value;
+            const treasuryAddr = document.getElementById('treasuryAddr').value;
+            const currentBlock = parseInt(document.getElementById('currentBlock').value);
+            const decayPerBlock = parseInt(document.getElementById('decayPerBlock').value);
+            
+            const receipt1Amount = parseInt(document.getElementById('receipt1Amount').value) || 0;
+            const receipt1Block = parseInt(document.getElementById('receipt1Block').value) || 0;
+            const receipt2Amount = parseInt(document.getElementById('receipt2Amount').value) || 0;
+            const receipt2Block = parseInt(document.getElementById('receipt2Block').value) || 0;
+            const useDuplicateTxid = document.getElementById('receipt1DuplicateTxid').checked;
+            
+            // Default transaction IDs
+            const txid1 = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+            const txid2 = useDuplicateTxid ? txid1 : 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
+            
+            const mockEndpoints = {
+                '/r/blockheight': currentBlock,
+                [`/r/children/${inscriptionId}/inscriptions/0`]: {
+                    ids: ['child1i0', 'child2i0'],
+                    more: false,
+                    page: 0
+                },
+                '/r/content/child1i0': JSON.stringify({
+                    schema: 'satspray.topup.v1',
+                    parent: inscriptionId,
+                    amount: receipt1Amount,
+                    block: receipt1Block,
+                    paid_to: treasuryAddr,
+                    txid: txid1
+                }),
+                '/r/content/child2i0': JSON.stringify({
+                    schema: 'satspray.topup.v1',
+                    parent: inscriptionId,
+                    amount: receipt2Amount,
+                    block: receipt2Block,
+                    paid_to: treasuryAddr,
+                    txid: txid2
+                })
+            };
+            
+            // Store in window for iframe access
+            window.mockEndpoints = mockEndpoints;
+            window.mockConfig = {
+                inscriptionId,
+                treasuryAddr,
+                currentBlock,
+                decayPerBlock
+            };
+            
+            log('Mock data updated', 'success');
+            log(`Inscription ID: ${inscriptionId}`, 'info');
+            log(`Current Block: ${currentBlock}`, 'info');
+            log(`Receipt 1: ${receipt1Amount} sats at block ${receipt1Block}`, 'info');
+            log(`Receipt 2: ${receipt2Amount} sats at block ${receipt2Block}`, 'info');
+            if (useDuplicateTxid) {
+                log('⚠️ Using duplicate transaction ID for both receipts (testing deduplication)', 'info');
+            }
+        }
+        
+        // Load inscription template with mock fetch
+        function reloadInscription() {
+            updateMockData();
+            
+            const iframe = document.getElementById('inscriptionFrame');
+            
+            // Read the inscription template
+            fetch('../client/src/templates/inscription/membershipCard-recursive.html')
+                .then(response => response.text())
+                .then(template => {
+                    // The key insight: We need to replace the getInscriptionId function 
+                    // to return our test ID instead of trying to parse pathname
+                    
+                    // Find the getInscriptionId function and replace it
+                    const getInscriptionIdPattern = /function getInscriptionId\(\) {[\s\S]*?return inscriptionId;\s*}/;
+                    
+                    const newGetInscriptionId = `function getInscriptionId() {
+                        // Mocked for testing
+                        return '${window.mockConfig.inscriptionId}';
+                    }`;
+                    
+                    // Replace the function
+                    let modifiedTemplate = template.replace(getInscriptionIdPattern, newGetInscriptionId);
+                    
+                    // Also replace the hardcoded treasury address
+                    const treasuryPattern = /window\.TREASURY_ADDR = "tb1q\.\.\.";/;
+                    const newTreasury = `window.TREASURY_ADDR = "${window.mockConfig.treasuryAddr}";`;
+                    modifiedTemplate = modifiedTemplate.replace(treasuryPattern, newTreasury);
+                    
+                    // Now inject our setup script at the beginning of the <script> tag
+                    const scriptStartPattern = /<script>/;
+                    const setupScript = `<script>
+                        // Mock setup
+                        window.TREASURY_ADDR = "${window.mockConfig.treasuryAddr}";
+                        window.DECAY_PER_BLOCK = ${window.mockConfig.decayPerBlock};
+                        
+                        parent.log('Setting TREASURY_ADDR to: ' + window.TREASURY_ADDR, 'info');
+                        
+                        // Override fetch before inscription code runs
+                        window.fetch = function(url) {
+                            parent.log('Fetch: ' + url, 'info');
+                            
+                            const mockData = parent.window.mockEndpoints[url];
+                            if (mockData !== undefined) {
+                                parent.log('Mock response: ' + JSON.stringify(mockData).substring(0, 100) + '...', 'success');
+                                return Promise.resolve({
+                                    ok: true,
+                                    json: function() { return Promise.resolve(mockData); },
+                                    text: function() { return Promise.resolve(typeof mockData === 'string' ? mockData : JSON.stringify(mockData)); }
+                                });
+                            }
+                            
+                            parent.log('No mock for: ' + url, 'error');
+                            return Promise.reject(new Error('Endpoint not mocked: ' + url));
+                        };
+                        
+                        // Override console for logging
+                        const originalConsole = {
+                            log: console.log,
+                            error: console.error
+                        };
+                        
+                        console.log = function(...args) {
+                            parent.log('Console: ' + args.join(' '), 'info');
+                            originalConsole.log.apply(console, args);
+                        };
+                        
+                        console.error = function(...args) {
+                            parent.log('Error: ' + args.join(' '), 'error');
+                            originalConsole.error.apply(console, args);
+                        };
+                        
+                        // Add error handler
+                        window.addEventListener('error', function(event) {
+                            parent.log('Script Error: ' + event.message + ' at ' + event.filename + ':' + event.lineno, 'error');
+                        });
+                    `;
+                    
+                    modifiedTemplate = modifiedTemplate.replace(scriptStartPattern, setupScript);
+                    
+                    // Set srcdoc
+                    iframe.srcdoc = modifiedTemplate;
+                    
+                    log('Inscription reloaded with mock data', 'success');
+                    log('Mock inscription ID: ' + window.mockConfig.inscriptionId, 'info');
+                    
+                    // Wait for iframe to load and check status
+                    iframe.onload = function() {
+                        setTimeout(function() {
+                            try {
+                                const iframeWin = iframe.contentWindow;
+                                
+                                if (iframeWin) {
+                                    log('Checking inscription status...', 'info');
+                                    log('INSCRIPTION_ID: ' + (iframeWin.INSCRIPTION_ID || 'not set'), 'info');
+                                    log('cardStatus defined: ' + (typeof iframeWin.cardStatus !== 'undefined'), 'info');
+                                    
+                                    // Check status badge
+                                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                    const statusBadge = iframeDoc.getElementById('statusBadge');
+                                    if (statusBadge) {
+                                        log('Status badge: ' + statusBadge.textContent, 'info');
+                                    }
+                                    
+                                    // Check balance display
+                                    const balanceDisplay = iframeDoc.getElementById('balanceDisplay');
+                                    if (balanceDisplay) {
+                                        log('Balance display: ' + balanceDisplay.textContent, 'info');
+                                    }
+                                }
+                            } catch (e) {
+                                log('Error checking iframe: ' + e.message, 'error');
+                            }
+                        }, 500);
+                    };
+                })
+                .catch(error => {
+                    log('Failed to load inscription template: ' + error.message, 'error');
+                });
+        }
+        
+        // Test cardStatus function
+        function testCardStatus() {
+            const iframe = document.getElementById('inscriptionFrame');
+            if (iframe.contentWindow && iframe.contentWindow.cardStatus) {
+                log('Calling cardStatus()...', 'info');
+                iframe.contentWindow.cardStatus()
+                    .then(status => {
+                        log('cardStatus() result:', 'success');
+                        log(JSON.stringify(status, null, 2), 'success');
+                    })
+                    .catch(error => {
+                        log('cardStatus() error: ' + error.message, 'error');
+                    });
+            } else {
+                log('cardStatus() not available. Make sure inscription is loaded.', 'error');
+            }
+        }
+        
+        // Initialize on load
+        window.onload = function() {
+            updateMockData();
+            log('Test harness ready. Click "Reload Inscription" to start testing.', 'success');
+        };
+    </script>
+</body>
+</html>

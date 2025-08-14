@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Embers Registration-Aware NFT (Stub)</title>
+  <style>
+    body { margin:0; background:#111; color:#eee; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .wrap { width: 480px; max-width: 96vw; background:#1b1b1b; border-radius:12px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.45); }
+    .media { width:100%; height: 320px; display:flex; align-items:center; justify-content:center; background:#0d0d0d; position:relative; }
+    .status { padding: 16px 20px; font-size: 14px; color:#bbb; display:flex; align-items:center; justify-content:space-between; }
+    .badge { padding:4px 10px; border-radius:999px; font-weight:700; font-size:12px; letter-spacing:0.4px; text-transform:uppercase; }
+    .active { background:#10b981; color:#082c22; }
+    .unreg { background:#f59e0b; color:#1b1202; }
+    .wm { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.12); font-weight:900; font-size:48px; letter-spacing:6px; text-transform:uppercase; }
+    .ph { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#666; }
+    img { max-width:100%; max-height:100%; display:block; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="media" id="media">
+      <div class="ph" id="ph">Artwork</div>
+      <div class="wm" id="wm">Unregistered</div>
+    </div>
+    <div class="status">
+      <div>Embers v0 stub • <span id="id">INSCRIPTION_ID</span></div>
+      <div class="badge unreg" id="badge">Unregistered</div>
+    </div>
+  </div>
+
+  <script>
+    // Replace INSCRIPTION_ID at creation time if desired
+    (function () {
+      // Phase-0 default: embed image via data URI (placeholder small PNG)
+      // Replace DATA_URI_IMAGE below during actual build/inscription
+      var EMBED_DATA_URI = window.EMBED_DATA_URI || 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0ea5e9"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><rect width="600" height="400" fill="url(#g)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="42" fill="#ffffff" opacity="0.8">Embers</text></svg>');
+
+      function parseSelfId() {
+        try {
+          // Attempt 1: parse from this frame's location (works if not srcdoc)
+          var p = (location && location.pathname) ? location.pathname : '';
+          var m = p.match(/\/(?:content|inscription)\/([a-f0-9]{64}i\d+)/);
+          if (m && m[1]) return m[1];
+          // Attempt 2: parse from referrer (ord viewer page URL contains the id)
+          var r = (document && document.referrer) ? document.referrer : '';
+          var mr = r.match(/\/(?:content|inscription)\/([a-f0-9]{64}i\d+)/);
+          if (mr && mr[1]) return mr[1];
+          return null;
+        } catch (e) { return null; }
+      }
+
+      function timeoutFetch(url, ms) {
+        return new Promise(function(resolve, reject){
+          var t = setTimeout(function(){ reject(new Error('timeout')); }, ms);
+          fetch(url).then(function(r){ clearTimeout(t); resolve(r); }, function(err){ clearTimeout(t); reject(err); });
+        });
+      }
+
+      async function getChildren() {
+        // Try ord recursive endpoints; fallback to window.CHILDREN stub
+        var hinted = (window.CHILDREN || []);
+        try {
+          var selfId = parseSelfId();
+          if (!selfId) return hinted;
+          // Try both variants depending on ord version
+          var urls = [
+            '/r/children/' + selfId + '/inscriptions',
+            '/r/children/' + selfId
+          ];
+          var ids = [];
+          for (var i = 0; i < urls.length; i++) {
+            try {
+              var res = await timeoutFetch(urls[i], 1500);
+              if (!res.ok) continue;
+              var txt = await res.text();
+              var data;
+              try { data = JSON.parse(txt); } catch(_) { data = null; }
+              if (data && Array.isArray(data.children)) {
+                // Newer ord returns objects; map to id when present
+                ids = data.children.map(function(c){ return (c && typeof c === 'object') ? c.id : c; }).filter(Boolean);
+                break;
+              }
+              if (data && Array.isArray(data.ids)) { ids = data.ids; break; }
+            } catch (_) { /* continue */ }
+          }
+          if (ids.length === 0) return hinted;
+          // Load each child's content and parse JSON if possible
+          var out = [];
+          for (var j = 0; j < ids.length; j++) {
+            try {
+              var cRes = await timeoutFetch('/content/' + ids[j], 1500);
+              if (!cRes.ok) continue;
+              var text = await cRes.text();
+              try { var json = JSON.parse(text); out.push(json); } catch(_) {}
+            } catch(_) {}
+          }
+          return out.length ? out : hinted;
+        } catch (e) {
+          return hinted;
+        }
+      }
+
+      function findRegistration(children) {
+        // Phase-0 trusts child receipts if present; return first match
+        for (var i = 0; i < children.length; i++) {
+          var c = children[i];
+          if (c && c.schema === 'buyer_registration.v1') return c;
+        }
+        return null;
+      }
+
+      function render(isRegistered) {
+        var media = document.getElementById('media');
+        var badge = document.getElementById('badge');
+        var wm = document.getElementById('wm');
+        var ph = document.getElementById('ph');
+
+        // Clear existing image
+        var imgs = media.getElementsByTagName('img');
+        if (imgs[0]) media.removeChild(imgs[0]);
+
+        if (isRegistered) {
+          var img = new Image();
+          img.src = EMBED_DATA_URI; // embedded path in Phase-0
+          media.appendChild(img);
+          badge.className = 'badge active';
+          badge.textContent = 'Active';
+          wm.style.display = 'none';
+          if (ph) ph.style.display = 'none';
+        } else {
+          badge.className = 'badge unreg';
+          badge.textContent = 'Unregistered';
+          wm.style.display = 'flex';
+          if (ph) ph.style.display = 'flex';
+        }
+      }
+
+      async function checkRegistration() {
+        var children = await getChildren();
+        var reg = findRegistration(children);
+        var isRegistered = !!reg;
+        render(isRegistered);
+        return { isRegistered: isRegistered, lastRegistration: reg };
+      }
+
+      window.registrationStatus = checkRegistration;
+      window.addEventListener('load', checkRegistration);
+    })();
+  </script>
+</body>
+</html>
+

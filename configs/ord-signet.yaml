@@ -1,0 +1,44 @@
+# Ord configuration for Signet
+# This configuration is optimized for inscription testing on Signet
+
+# Bitcoin Core connection
+bitcoin_rpc_url: "http://127.0.0.1:38332"
+bitcoin_rpc_username: "ordtest"
+bitcoin_rpc_password: "ordtest2024"
+
+# Network selection
+chain: "signet"
+
+# Ord server settings
+server_http_port: 8080
+server_https_port: null
+
+# Data directory
+data_dir: "/Users/michaelchristopher/.local/share/ord/signet"
+
+# Index settings
+index_runes: true
+index_sats: true
+index_transactions: true
+
+# Cache settings
+commit_interval: 10000
+
+# Logging
+log_level: "info"
+
+# CORS settings (for development)
+enable_cors: true
+cors_allow_any_origin: true
+
+# API settings
+enable_json_api: true
+
+# Wallet settings (optional - uncomment to use)
+# wallet: "ord-signet"
+
+# Fee settings (sats/vbyte)
+# fee_rate: 1
+
+# Indexing performance
+# index_cache_size: 1073741824  # 1GB

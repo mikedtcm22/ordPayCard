@@ -1,0 +1,54 @@
+import React, { useEffect, useState } from 'react';
+import { initOrdConnect, getOrdConnectProvider } from '@/lib/ord-connect-fix';
+
+interface OrdConnectWrapperProps {
+  children: React.ReactNode;
+}
+
+export const OrdConnectWrapper: React.FC<OrdConnectWrapperProps> = ({ children }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [Provider, setProvider] = useState<any>(null);
+
+  useEffect(() => {
+    const loadProvider = async () => {
+      try {
+        await initOrdConnect();
+        const OrdConnectProvider = getOrdConnectProvider();
+        setProvider(() => OrdConnectProvider);
+        setIsLoaded(true);
+      } catch (err) {
+        console.error('Failed to load OrdConnect:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load wallet provider');
+        setIsLoaded(true);
+      }
+    };
+
+    loadProvider();
+  }, []);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading wallet provider...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !Provider) {
+    // Fallback to children without provider if loading fails
+    console.warn('OrdConnect failed to load, rendering without wallet provider');
+    return <>{children}</>;
+  }
+
+  // Configure provider for Signet
+  const config = {
+    network: 'signet',
+    auto: false, // Don't auto-connect
+  };
+
+  return <Provider config={config}>{children}</Provider>;
+};

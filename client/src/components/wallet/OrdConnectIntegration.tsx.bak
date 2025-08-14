@@ -1,0 +1,14 @@
+import React from 'react';
+import { OrdConnectProvider, OrdConnectKit, Network } from '@ordzaar/ord-connect';
+
+export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <OrdConnectProvider network={Network.SIGNET}>
+      {children}
+    </OrdConnectProvider>
+  );
+};
+
+export const WalletConnectButton: React.FC = () => {
+  return <OrdConnectKit />;
+};

@@ -1,0 +1,19 @@
+{
+  "repoName": "embers-registration-examples",
+  "files": {
+    "README.md": "README-public.md",
+    "LICENSE": "MIT",
+    "CODE_OF_CONDUCT.md": "(add later)",
+    "CONTRIBUTING.md": "(add later)",
+    "docs/PRD-registration-system.md": "docs/PRD-registration-system.md",
+    "docs/reg-phases/phase-0-foundation.md": "docs/reg-phases/phase-0-foundation.md",
+    "docs/reg-phases/phase-1-mvp.md": "docs/reg-phases/phase-1-mvp.md",
+    "docs/reg-phases/phase-2-enhanced-validation.md": "docs/reg-phases/phase-2-enhanced-validation.md",
+    "docs/reg-phases/phase-3-developer-tools.md": "docs/reg-phases/phase-3-developer-tools.md",
+    "docs/testing/testing-1-MVP.md": "docs/testing/testing-1-MVP.md",
+    "docs/specs/buyer_registration.v1.md": "docs/specs/buyer_registration.v1.md",
+    "templates/parent/registrationWrapper.html": "client/src/templates/inscription/registrationWrapper.html",
+    "tools/prepare-parent.js": "inscription-testing/prepare-parent.js",
+    "samples/registration.sample.json": "inscription-testing/registration.sample.json"
+  }
+}
