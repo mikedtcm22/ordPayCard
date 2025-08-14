@@ -11,14 +11,7 @@
  * unconfirmed tx, missing height, or dependency errors.
  */
 
-export type FetchMeta = (inscriptionId: string) => Promise<any>;
-export type FetchTx = (txid: string) => Promise<any>;
-
-export interface LastTransferDeps {
-  fetchMeta: FetchMeta;
-  fetchTx: FetchTx;
-  nowMs?: () => number;
-}
+import type { LastTransferDeps } from './types';
 
 const THIRTY_SECONDS_MS = 30_000;
 
@@ -37,6 +30,19 @@ function extractTxidFromSatpointString(satpointOrLocation: unknown): string | nu
   if (!candidateTxid || candidateTxid.length !== 64) return null;
   if (!/^[0-9a-fA-F]{64}$/.test(candidateTxid)) return null;
   return candidateTxid.toLowerCase();
+}
+
+/**
+ * Extract txid from a metadata object by checking `satpoint` then `location`.
+ */
+function extractTxidFromMeta(meta: unknown): string | null {
+  if (!meta || typeof meta !== 'object') return null;
+  const m: any = meta as any;
+  return (
+    extractTxidFromSatpointString(m.satpoint) ??
+    extractTxidFromSatpointString(m.location) ??
+    null
+  );
 }
 
 /**
@@ -86,8 +92,7 @@ export async function getLastTransferHeight(
       return null;
     }
 
-    const satpointOrLocation: unknown = (meta as any).satpoint ?? (meta as any).location;
-    const txid = extractTxidFromSatpointString(satpointOrLocation);
+    const txid = extractTxidFromMeta(meta);
     if (!txid) {
       const entry: CacheEntry = { height: null, expiresAtMs: now + THIRTY_SECONDS_MS };
       cacheByInscriptionId.set(inscriptionId, entry);
