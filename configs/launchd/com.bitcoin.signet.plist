@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent for Bitcoin Core Signet Node on macOS
+  Install to: ~/Library/LaunchAgents/com.bitcoin.signet.plist
+  
+  Commands:
+  launchctl load ~/Library/LaunchAgents/com.bitcoin.signet.plist
+  launchctl unload ~/Library/LaunchAgents/com.bitcoin.signet.plist
+  launchctl list | grep bitcoin
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.bitcoin.signet</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/bitcoind</string>
+        <string>-conf=/Users/michaelchristopher/.bitcoin/signet/bitcoin.conf</string>
+        <string>-datadir=/Users/michaelchristopher/.bitcoin/signet</string>
+    </array>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+    
+    <key>ProcessType</key>
+    <string>Background</string>
+    
+    <key>StandardOutPath</key>
+    <string>/Users/michaelchristopher/.bitcoin/signet/stdout.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/Users/michaelchristopher/.bitcoin/signet/stderr.log</string>
+    
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+    </dict>
+    
+    <key>Nice</key>
+    <integer>10</integer>
+    
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+</dict>
+</plist>

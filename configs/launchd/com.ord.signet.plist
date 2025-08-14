@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent for Ord Server on Signet (macOS)
+  Install to: ~/Library/LaunchAgents/com.ord.signet.plist
+  
+  Commands:
+  launchctl load ~/Library/LaunchAgents/com.ord.signet.plist
+  launchctl unload ~/Library/LaunchAgents/com.ord.signet.plist
+  launchctl list | grep ord
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ord.signet</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/ord</string>
+        <string>--bitcoin-rpc-url</string>
+        <string>http://127.0.0.1:38332</string>
+        <string>--bitcoin-rpc-username</string>
+        <string>ordtest</string>
+        <string>--bitcoin-rpc-password</string>
+        <string>ordtest2024</string>
+        <string>--chain</string>
+        <string>signet</string>
+        <string>--data-dir</string>
+        <string>/Users/michaelchristopher/.local/share/ord/signet</string>
+        <string>--enable-json-api</string>
+        <string>--index-runes</string>
+        <string>--index-sats</string>
+        <string>server</string>
+        <string>--http-port</string>
+        <string>8080</string>
+    </array>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+    
+    <key>ProcessType</key>
+    <string>Background</string>
+    
+    <key>StandardOutPath</key>
+    <string>/Users/michaelchristopher/.local/share/ord/signet/stdout.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/Users/michaelchristopher/.local/share/ord/signet/stderr.log</string>
+    
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>16384</integer>
+    </dict>
+    
+    <key>Nice</key>
+    <integer>15</integer>
+    
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+    
+    <!-- Wait for Bitcoin Core to start -->
+    <key>StartInterval</key>
+    <integer>30</integer>
+</dict>
+</plist>

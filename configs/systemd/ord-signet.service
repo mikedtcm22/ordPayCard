@@ -1,0 +1,57 @@
+# Systemd service file for ord server on Signet
+# Install to: /etc/systemd/system/ord-signet.service
+# Or user service: ~/.config/systemd/user/ord-signet.service
+
+[Unit]
+Description=Ord Server for Signet
+After=network.target bitcoind-signet.service
+Requires=bitcoind-signet.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ord \
+    --bitcoin-rpc-url http://127.0.0.1:38332 \
+    --bitcoin-rpc-username ordtest \
+    --bitcoin-rpc-password ordtest2024 \
+    --chain signet \
+    --data-dir /home/%u/.local/share/ord/signet \
+    --enable-json-api \
+    --index-runes \
+    --index-sats \
+    server \
+    --http-port 8080
+
+ExecStop=/bin/kill -TERM $MAINPID
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=60
+Restart=on-failure
+RestartSec=30
+
+# Wait for Bitcoin Core to be ready
+ExecStartPre=/bin/sleep 10
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/home/%u/.local/share/ord
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+PrivateDevices=true
+
+# Resource limits
+LimitNOFILE=16384
+Nice=15
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,45 @@
+# Systemd service file for Bitcoin Core Signet node
+# Install to: /etc/systemd/system/bitcoind-signet.service
+# Or user service: ~/.config/systemd/user/bitcoind-signet.service
+
+[Unit]
+Description=Bitcoin Core Signet Node
+After=network.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+ExecStart=/usr/local/bin/bitcoind -conf=/home/%u/.bitcoin/signet/bitcoin.conf -datadir=/home/%u/.bitcoin/signet
+ExecStop=/usr/local/bin/bitcoin-cli -conf=/home/%u/.bitcoin/signet/bitcoin.conf stop
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=180
+Restart=on-failure
+RestartSec=60
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/home/%u/.bitcoin/signet
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+PrivateDevices=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Resource limits
+LimitNOFILE=65536
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
