@@ -103,6 +103,30 @@ describe('getLastTransferHeight (A0)', () => {
     expect(fetchTx).not.toHaveBeenCalled();
   });
 
+  test('unconfirmed result is cached within 30s (no re-fetch)', async () => {
+    const startMs = 4_000_000;
+    const now = { t: startMs };
+    const nowMs = () => now.t;
+
+    const txidUnconf = makeHex(64).replace(/a/g, 'd');
+    const fetchMeta = jest.fn().mockResolvedValue({ satpoint: `${txidUnconf}:0:0` });
+    const fetchTx = jest.fn().mockResolvedValue({ status: { confirmed: false } });
+
+    const deps = { fetchMeta, fetchTx, nowMs };
+
+    const first = await getLastTransferHeight('INSCR_UNCONF', deps);
+    expect(first).toBeNull();
+    expect(fetchMeta).toHaveBeenCalledTimes(1);
+    expect(fetchTx).toHaveBeenCalledTimes(1);
+
+    // Within TTL → should not re-fetch and still return null
+    now.t = startMs + 10_000;
+    const second = await getLastTransferHeight('INSCR_UNCONF', deps);
+    expect(second).toBeNull();
+    expect(fetchMeta).toHaveBeenCalledTimes(1);
+    expect(fetchTx).toHaveBeenCalledTimes(1);
+  });
+
   test('dependency error surfaces as null (fail-closed)', async () => {
     const fetchMeta = jest.fn().mockRejectedValue(new Error('meta error'));
     const fetchTx = jest.fn();
