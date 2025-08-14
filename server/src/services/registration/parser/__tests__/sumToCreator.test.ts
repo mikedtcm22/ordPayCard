@@ -100,6 +100,45 @@ describe('sumOutputsToAddress (A2)', () => {
     const sum = sumOutputsToAddress(hex, creatorAddr, 'testnet');
     expect(sum).toBe(0n);
   });
+
+  test('mixed output types: sums only exact matches for creator across P2PKH/P2WPKH/P2TR', () => {
+    // Creator is P2WPKH; include other types which must be ignored
+    const keyCreator = makeKeyPair();
+    const creatorAddr = payments.p2wpkh({ pubkey: toBuffer(keyCreator.publicKey), network: networks.testnet }).address!;
+
+    const p2pkhAddr = payments.p2pkh({ pubkey: toBuffer(makeKeyPair().publicKey), network: networks.testnet }).address!;
+    const p2trAddr = payments.p2tr({ internalPubkey: xOnly(makeKeyPair().publicKey), network: networks.testnet }).address!;
+
+    const scriptCreator = address.toOutputScript(creatorAddr, networks.testnet);
+    const scriptP2pkh = address.toOutputScript(p2pkhAddr, networks.testnet);
+    const scriptP2tr = address.toOutputScript(p2trAddr, networks.testnet);
+
+    const hex = buildTxHex([
+      { script: scriptP2pkh, value: 999 },
+      { script: scriptCreator, value: 2000 },
+      { script: scriptP2tr, value: 1234 },
+      { script: scriptCreator, value: 1 },
+    ]);
+
+    const sum = sumOutputsToAddress(hex, creatorAddr, 'testnet');
+    expect(sum).toBe(2001n);
+  });
+
+  test('supports signet and regtest networks (mapped to testnet)', () => {
+    const keyCreator = makeKeyPair();
+    const creatorAddr = payments.p2wpkh({ pubkey: toBuffer(keyCreator.publicKey), network: networks.testnet }).address!;
+    const scriptCreator = address.toOutputScript(creatorAddr, networks.testnet);
+    const hex = buildTxHex([
+      { script: scriptCreator, value: 3210 },
+    ]);
+
+    expect(sumOutputsToAddress(hex, creatorAddr, 'signet')).toBe(3210n);
+    expect(sumOutputsToAddress(hex, creatorAddr, 'regtest')).toBe(3210n);
+  });
+
+  test('throws on invalid raw transaction hex', () => {
+    expect(() => sumOutputsToAddress('not-hex', 'tb1qxy', 'testnet' as any)).toThrow('Invalid raw transaction hex');
+  });
 });
 
 
