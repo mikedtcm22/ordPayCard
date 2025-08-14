@@ -24,7 +24,7 @@ function isTxid(s: string): boolean {
 }
 
 async function resolveRawTxHex(txhexOrId: string, opts: VerifyPaymentOptions): Promise<string | null> {
-  if (isHex(txhexOrId)) return txhexOrId;
+  // Prefer txid resolution when the input looks like a txid and a resolver is available
   if (isTxid(txhexOrId) && opts.fetchTx) {
     const p = opts.fetchTx(txhexOrId);
     if (opts.withTimeout && typeof opts.fetchTimeoutMs === 'number') {
@@ -32,6 +32,8 @@ async function resolveRawTxHex(txhexOrId: string, opts: VerifyPaymentOptions): P
     }
     return await p;
   }
+  // Otherwise accept raw hex directly
+  if (isHex(txhexOrId)) return txhexOrId;
   return null;
 }
 

@@ -123,6 +123,65 @@ describe('verifyPayment (A3)', () => {
     } as any);
     expect(amt).toBe(5_000n);
   });
+
+  test('resolves raw tx hex via txid using fetchTx and returns sum when valid', async () => {
+    const payload = `${nftId}|${currentBlock + 5}`;
+    const hex = buildTxHex({
+      opReturnPayload: payload,
+      outputs: [
+        { addr: creatorAddr, value: 7_000 },
+      ],
+    });
+    const txid = 'a'.repeat(64);
+    const fetchTx = jest.fn().mockResolvedValue(hex);
+
+    const amt = await verifyPayment(txid, creatorAddr, 1_000n, nftId, {
+      currentBlock,
+      network: 'testnet',
+      txBlockHeight: 220001,
+      fetchTx,
+    } as any);
+    expect(fetchTx).toHaveBeenCalledTimes(1);
+    expect(fetchTx).toHaveBeenCalledWith(txid);
+    expect(amt).toBe(7_000n);
+  });
+
+  test('returns 0n when txid provided but no fetchTx resolver is available', async () => {
+    const txid = 'b'.repeat(64);
+    const amt = await verifyPayment(txid, creatorAddr, 1n, nftId, {
+      currentBlock,
+      network: 'testnet',
+    } as any);
+    expect(amt).toBe(0n);
+  });
+
+  test('returns 0n when minBlock is specified but txBlockHeight is missing', async () => {
+    const payload = `${nftId}|${currentBlock + 10}`;
+    const hex = buildTxHex({ opReturnPayload: payload, outputs: [{ addr: creatorAddr, value: 2_000 }] });
+    const amt = await verifyPayment(hex, creatorAddr, 1n, nftId, {
+      currentBlock,
+      network: 'testnet',
+      minBlock: 210000,
+      // txBlockHeight intentionally omitted
+    } as any);
+    expect(amt).toBe(0n);
+  });
+
+  test('supports regtest network mapping end-to-end', async () => {
+    const payload = `${nftId}|${currentBlock + 10}`;
+    const hex = buildTxHex({
+      opReturnPayload: payload,
+      outputs: [
+        { addr: creatorAddr, value: 1_234 },
+      ],
+    });
+    const amt = await verifyPayment(hex, creatorAddr, 1n, nftId, {
+      currentBlock,
+      network: 'regtest',
+      txBlockHeight: 220000,
+    } as any);
+    expect(amt).toBe(1_234n);
+  });
 });
 
 
