@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const helmet = require('helmet');
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import pino from 'pino';
