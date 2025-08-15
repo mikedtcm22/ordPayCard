@@ -25,17 +25,18 @@ Purpose: Reduce integration time for marketplaces and creators. Deliver SDK, sta
       - Spend the exact buyer-locked marker outpoint from the sale tx (Ordinals wallet signs only this input via PSBT; payments wallet funds and signs its inputs)
       - Pay the creator address ≥ feePolicy(sale_amount_sats)
       - Optionally include a fee OP_RETURN re-committing `(parent_digest, sale_amount_sats, buyer_pubkey, sale_nonce)` plus `receipt_hash` and `expiry_block`
-    - Receipt JSON (child) MUST include:
-      - `sale_tx_hex`, `fee_tx_hex`, `expiry_block`, `buyer_pubkey`, canonical fields for hashing, and a buyer BIP-322 signature over a canonical message `{parent_id, sale_txid, fee_txid, sale_amount_sats, expiry_block}`
+     - Receipt JSON (child, provenance):
+      - Created as a provenance child (reveal spends the parent and includes tag 3). MUST include `fee_txid`, `expiry_block`, and canonical fields; buyer BIP-322 signature remains recommended for attribution but is not required for on-chain consent in provenance mode.
     - On-chain parser (Embers Core v2) verifies entirely on-chain:
       - Sale OP_RETURN fields; recomputes seller payout addresses via pay-to-contract; sums amounts to equal `sale_amount_sats`; rejects extraneous outputs
       - Marker presence, that it is buyer-locked to `buyer_pubkey`, and that the fee tx spends that exact marker; parser also verifies fee tx includes a buyer-signed input if required by policy
       - Fee tx pays creator ≥ policy and (if present) fee OP_RETURN recommit matches `receipt_hash`
       - Buyer BIP-322 signature validity; expiry window using `/r/blockheight`
-    - Parent inscription auto-bricks unless a child receipt passes all checks
+     - Parent inscription auto-bricks unless a provenance child receipt passes all checks and `H_child == H_parent` with fee window satisfied
 
     - Split-wallet compatibility (e.g., Xverse payments vs ordinals wallets):
-      - PSBT flow: payments wallet adds/Signs funding inputs and creator output; ordinals wallet signs only the buyer-locked marker input; finalize and broadcast. No buyer funds required.
+       - PSBT flow: payments wallet adds/Signs funding inputs and creator output; ordinals wallet signs only the buyer-locked marker input; finalize and broadcast. No buyer funds required.
+       - Provenance integration: child reveal spends the parent in the same flow or immediately after (two-tx mode), ensuring `H_child == H_parent`. SDK provides single-reveal builder when supported, and two-tx fallback with fee window (K).
       - Fallbacks: if buyer wallet cannot sign P2TR key-path, tool offers (1) hash-locked marker variant; or (2) require a small buyer UTXO input (less preferred). CPFP packaging and short expiry further reduce race surface.
 
 ----
@@ -82,16 +83,21 @@ Purpose: Reduce integration time for marketplaces and creators. Deliver SDK, sta
   - [ ] Node + browser builds; tree-shaking
   - [ ] Examples with regtest/signet configs
   - [ ] Wallet helpers for Unisat and Xverse (connection, tx creation hints)
+  - [ ] (Moved from Phase 2) BIP-322 buyer signature verification utility:
+    - API: `verifyBuyerSig(message, signature, pubkey, network)` with types and errors
+    - Unit tests: valid/invalid signatures; unsupported pubkey format throws
+    - Integration: optional buyer attribution in receipt tools
 
 - API
   - [ ] OpenAPI spec and Swagger UI mounted at `/api/docs`
   - [ ] Pagination and caching for status endpoint
   - [ ] Rate limiting and simple auth (API key for partner usage)
 
- - CLI & templates
+  - CLI & templates
   - [ ] PSBT generator for seller sale tx (OP_RETURN, marker UTXO, pay-to-contract payouts)
   - [ ] PSBT generator for buyer fee tx (spend marker, pay creator, optional fee OP_RETURN)
-  - [ ] Canonical receipt JSON + BIP-322 signer
+   - [ ] Canonical receipt JSON (provenance) generator + optional BIP-322 signer for attribution
+   - [ ] Provenance helpers: build reveal PSBT that spends parent and inscribes JSON; single-reveal (fee+receipt in one) and two-tx (fee then reveal) modes
   - [ ] Plop or custom generator for NFT + registration JSON skeletons
   - [ ] Commands to fetch status and validate txids locally
   - [ ] Atlas creator tool (`embers-atlas`): CLI + simple UI; inputs: image, split strategy (2-share/XOR/3×3), tile size; outputs: shares/tiles + manifest + HTML snippet
@@ -107,10 +113,12 @@ Purpose: Reduce integration time for marketplaces and creators. Deliver SDK, sta
   - [ ] `AtlasPreview` component to visualize manifests and composition
   - [ ] `TraitPreview` and `BGFGPreview` components to validate shared assets
 
- - Testing
-  - [ ] E2E: generate sale+fee PSBTs, inscribe receipt, parser auto-bricks/activates correctly on regtest without any server or index attestation
+  - Testing
+   - [ ] E2E: generate sale+fee PSBTs, inscribe provenance receipt (spend parent), parser auto-bricks/activates correctly on regtest without any server or index attestation
+   - [ ] E2E (two-tx window): fee first then reveal; accept if `fee.height ≤ H_child` and `(H_child - fee.height) ≤ K`
   - [ ] Split-wallet E2E: payments wallet funds fee tx while ordinals wallet signs marker input; racer attempts cannot consume marker
   - [ ] Unit tests for SDK and API
+  - [ ] (Moved from Phase 2) Client/server parity tests for BIP-322 verification
   - [ ] E2E on regtest that simulates full registration
   - [ ] E2E that composes a tiled image from children and verifies layout
   - [ ] Backward-compat test: upgrade `Embers Core` child; parent continues to work without change

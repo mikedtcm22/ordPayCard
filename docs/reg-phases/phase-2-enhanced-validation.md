@@ -2,18 +2,19 @@
 
 Version: 1.0 • Owner: Core Eng • Duration: ~1 week
 
-Purpose: Harden registration validation. Introduce OP_RETURN-based binding of payments to a specific NFT, richer parser, and chain integrity checks.
+Purpose: Harden registration validation. Adopt provenance receipts (owner-enforced via spending the parent) and OP_RETURN-based fee binding, plus richer parser and chain integrity checks.
 
 ----
 
 ### Scope
+- Provenance receipts: child inscription must be created as a provenance child (reveal spends the parent and includes tag 3 with the parent ID) to enforce owner consent on-chain
 - Require registration fee payments to include OP_RETURN with NFT inscription ID and expiry
-- Parser v1.0: hex parsing, outputs, OP_RETURN extraction, basic address decoding, optional buyer BIP-322 verification
+- Parser v1.0: hex parsing, outputs, OP_RETURN extraction, basic address decoding; buyer BIP-322 becomes optional (attribution) under provenance
 - Deduplicate registrations by txid
 - Server mirrors logic for status API
  - Artwork handling: DEFAULT remains embedded image in parent; ALT continue to support a single full-image child; atlas/tiling deferred to Phase 3
   - Introduce on-chain API library inscriptions ("Embers Core v1") to keep parent HTML minimal by offloading parsing/validation logic
-  - Satpoint-based last-transfer gating: only accept receipts whose fee tx block height is ≥ parent’s last transfer height (derived from current satpoint)
+  - Provenance gating: accept only when latest child genesis height equals current parent satpoint height (H_child == H_parent). Fee tx must confirm ≤ child height and within a small window K (e.g., K ≤ 1) when fee and reveal are separate txs.
 
 ----
 
@@ -50,7 +51,10 @@ Purpose: Harden registration validation. Introduce OP_RETURN-based binding of pa
   - [ ] Expose debug info flag for developers
 
 - Backend status API
-  - [ ] Fetch children, load their JSON, call parser, cache results for 30s
+  - [ ] Fetch provenance children for parent and identify the latest child and its genesis height (H_child)
+  - [ ] Load child JSON; verify it references `feeTxid`
+  - [ ] Fetch parent current satpoint → height (H_parent); enforce `H_child == H_parent`
+  - [ ] Fetch `feeTxid`; enforce OP_RETURN match, creator sum ≥ minFee, and `fee.height ≤ H_child` with `(H_child - fee.height) ≤ K`
   - [ ] Return `{isRegistered, lastRegistration, integrity, debug}`
 
 - Tooling & examples
@@ -65,11 +69,12 @@ Purpose: Harden registration validation. Introduce OP_RETURN-based binding of pa
   - [ ] Add env/config to hold `EMBERS_CORE_PARENT_ID` per network
   - [ ] Document size budgets and how to keep the main parent minimal
 
-- Satpoint gating (new)
-  - [ ] Server: fetch parent inscription metadata to derive `lastTransferHeight` (via current satpoint → tx → block height) with 30s cache; fail-closed on error
-  - [ ] Parser orchestration: accept `minBlock` in options and reject receipts whose fee tx block < `minBlock`
-  - [ ] Status API: include `debug.lastTransferHeight` and enforce gating in `isRegistered`
-  - [ ] Template (optional best-effort): when recursive endpoints expose satpoint and tx height, gate activation client-side; otherwise fail closed and defer to server
+- Provenance gating (new)
+  - [ ] Server: compute `H_parent` from current satpoint; compute `H_child` from latest provenance child; enforce `H_child == H_parent`
+  - [ ] Orchestration: enforce `fee.height ≤ H_child` and `(H_child - fee.height) ≤ K` (configurable; default K = 1)
+  - [ ] Status API: include `debug.{H_parent,H_child,feeHeight,K}` and enforce in `isRegistered`
+  - [ ] Template (optional): when recursion endpoints expose child heights and satpoint height, gate client-side best-effort; fail closed otherwise
+  - [ ] Non-sale moves: support a lightweight "rebind" provenance child (no fee) so `H_child == H_parent` remains true across owner transfers
 
 ----
 
@@ -111,16 +116,30 @@ Conventions
 - Coverage target: ≥ 80% lines/branches in new modules; enforce per package.
 - Default network for Phase 2 tests: regtest.
 
+Progress notes (2025-08-14)
+- A0–A4 partially executed and currently GREEN in the codebase; future re-runs should start from this green baseline and can refactor/extend without changing behavior.
+  - A0 implemented utilities:
+    - `getLastTransferHeight` (server): `server/src/services/registration/parser/lastTransfer.ts`, tests: `__tests__/lastTransfer.test.ts`
+    - `getLatestChildHeight` (server): `server/src/services/registration/parser/latestChildHeight.ts`, tests: `__tests__/latestChildHeight.test.ts`
+  - A1 OP_RETURN parsing: `server/src/services/registration/parser/opReturn.ts`, tests: `__tests__/opReturnExtractor.test.ts`
+  - A2 sum-to-creator: `server/src/services/registration/parser/sumToCreator.ts`, tests: `__tests__/sumToCreator.test.ts`
+  - A3 verifyPayment orchestration (window checks passed in via options for now): `server/src/services/registration/parser/verifyPayment.ts`, tests: `__tests__/verifyPayment.test.ts`
+  - A4 dedupe: `server/src/services/registration/parser/dedupe.ts`, tests: `__tests__/dedupe.test.ts`
+  - Jest setup centralized ECC init for P2TR tests: `server/jest.setup.ts`
+
 Track A — Parser Library v1.0 (server-first parity, then client bundle)
-Micro-task A0 (new): Last-transfer height derivation (server utility)
+Micro-task A0 (updated): Parent/child heights derivation (server utilities)
 - RED
   - Add `server/src/services/registration/parser/__tests__/lastTransfer.test.ts`
-  - Cases: missing meta → null; meta with `satpoint` → extracts `txid` and fetches tx height; unconfirmed tx → returns null; caches for 30s.
+  - Cases (H_parent): missing meta → null; meta with `satpoint` → extracts `txid` and fetches tx height; unconfirmed tx → null; caches for 30s.
+  - Add `server/src/services/registration/parser/__tests__/latestChildHeight.test.ts`
+  - Cases (H_child): no children → null; children with heights → returns max height; caches for 30s; error → null (fail closed).
 - GREEN
   - `async function getLastTransferHeight(inscriptionId: string, deps: { fetchMeta: (id:string)=>Promise<any>, fetchTx:(txid:string)=>Promise<any>, nowMs?:()=>number }): Promise<number|null>`
-  - Implement simple in-memory cache keyed by inscriptionId with TTL
+  - `async function getLatestChildHeight(inscriptionId: string, deps: { fetchChildren: (id:string)=>Promise<any[]>, nowMs?:()=>number }): Promise<number|null>`
+  - Implement simple in-memory TTL caches keyed by inscriptionId
 - REFACTOR (planning)
-  - Normalize meta field names (`satpoint` vs `location`), centralize cache
+  - Normalize meta field names (`satpoint` vs `location`), centralize cache; align child height fetch with ord recursion shape
 
 Location plan
 - Server source of truth: `server/src/services/registration/parser/*`
@@ -150,10 +169,10 @@ Micro-task A2: Decode outputs and sum payments to creator
 Micro-task A3: `verifyPayment` orchestration
 - RED
   - `server/src/services/registration/parser/__tests__/verifyPayment.test.ts`
-  - Cases: missing OP_RETURN → returns 0n; mismatched nftId → 0n; expired → 0n; below `minBlock` (receipt older than last transfer) → 0n; valid → returns bigint ≥ minFee; sums across multiple matching outputs.
+  - Cases: missing OP_RETURN → 0n; mismatched nftId → 0n; expired → 0n; provenance window violations → 0n (fee.height > H_child or H_child - fee.height > K); valid → returns bigint ≥ minFee; sums across multiple matching outputs.
 - GREEN
-  - `function verifyPayment(txhexOrId: string, creatorAddr: string, minFee: bigint, nftId: string, opts: { currentBlock: number; network: 'regtest'|'testnet'|'mainnet'; minBlock?: number; fetchTx?: (txid: string) => Promise<string> }): Promise<bigint>`
-  - Enforce `opts.minBlock` when provided; accept txid by fetching raw hex via `opts.fetchTx`.
+  - `function verifyPayment(txhexOrId: string, creatorAddr: string, minFee: bigint, nftId: string, opts: { currentBlock: number; network: 'regtest'|'signet'|'testnet'|'mainnet'; childHeight?: number; feeHeight?: number; kWindow?: number; fetchTx?: (txid: string) => Promise<string> }): Promise<bigint>`
+  - Enforce provenance window when `childHeight` is provided; accept txid by fetching raw hex via `opts.fetchTx`.
 - REFACTOR (planning)
   - Split network/address validation; centralize error messages.
 
@@ -166,15 +185,9 @@ Micro-task A4: Deduplicate registrations by txid
 - REFACTOR (planning)
   - Provide `Map`-based implementation variants benchmark note.
 
-Micro-task A5 (Optional): BIP-322 buyer signature verify
-- RED
-  - `server/src/services/registration/parser/__tests__/buyerSig.test.ts`
-  - Valid signature returns true; invalid returns false; unsupported pubkey format throws.
-- GREEN
-  - `function verifyBuyerSig(message: string, signature: string, pubkey: string, network: 'regtest'|'testnet'|'mainnet'): boolean`
-  - Minimal third-party-free verification or thin wrapper with fallback stub under feature flag.
-- REFACTOR (planning)
-  - Replace stub with full implementation or well-maintained lib, measured size impact for client bundle.
+Micro-task A5: BIP-322 buyer signature verify — Deferred to Phase 3
+- This item has been moved out of Phase 2 to reduce early complexity.
+- New location: see Phase 3 plan (Developer Tools) for `verifyBuyerSig` tasks and tests.
 
 Micro-task A6: Defensive parsing and timeouts
 - RED
@@ -188,6 +201,7 @@ Micro-task A6: Defensive parsing and timeouts
 Parity tasks (client)
 - After A1–A6 GREEN on server, port identical APIs under `client/src/lib/embers-core/parser/*` with Vitest mirrors:
   - RED: duplicate test names and cases; GREEN: minimal port; ensure deterministic results.
+  - Add RED/GREEN for provenance gating helper (compute `H_child` from children; `H_parent` from satpoint) when recursion endpoints are available.
 
 Track B — NFT Template updates (registration wrapper flows)
 Files: `client/src/templates/inscription/registrationWrapper.html` + test harness
@@ -197,7 +211,7 @@ Micro-task B1: Parser-verified flow returns 0 sats on OP_RETURN missing/mismatch
   - `client/src/templates/inscription/__tests__/registrationWrapper.test.ts`
   - Simulate calling `EmbersCore.verifyPayment` via injected mock; assert UI displays 0 sats and "Not Registered".
 - GREEN
-  - Wire wrapper to call `EmbersCore.verifyPayment`; render result; guard against undefined.
+  - Wire wrapper to call `EmbersCore.verifyPayment`; render result; guard against undefined. When recursion endpoints exist, surface provenance gating (require `H_child == H_parent` and fee window).
 - REFACTOR (planning)
   - Extract minimal DOM helpers; document env hooks in template header.
 
@@ -210,12 +224,13 @@ Micro-task B2: Deduplicate by `feeTxid`
   - Surface lastRegistration in a consistent JSON shape.
 
 Micro-task B3: Developer debug flag
-Micro-task B0 (new, optional): Recursive satpoint gating best-effort
+  - Include `H_parent`, `H_child`, `feeHeight`, and `K` in debug output when available
+ Micro-task B0 (new, optional): Provenance gating best-effort
 - RED
-  - `client/src/templates/inscription/__tests__/registrationWrapper.satpoint.test.ts`
-  - When `/r/inscription/{id}` exposes `satpoint` and `/r/tx/{txid}` exposes `block_height`, wrapper gates activation requiring receipt.block ≥ lastTransferHeight. When endpoints missing, wrapper fails closed.
+  - `client/src/templates/inscription/__tests__/registrationWrapper.provenance.test.ts`
+  - When recursion endpoints expose child list with heights and parent satpoint height, wrapper enforces: latest `H_child == H_parent`, `fee.height ≤ H_child`, and `(H_child - fee.height) ≤ K`. When endpoints missing, wrapper fails closed.
 - GREEN
-  - Implement `getLastTransferHeight` in template with timeouts; integrate into activation logic guarded by feature flag
+  - Implement minimal helpers to read `H_parent` and `H_child` with timeouts; integrate into activation logic guarded by feature flag
 - REFACTOR (planning)
   - Document ord minimum version for this optional path
 - RED
@@ -231,9 +246,9 @@ Files: `server/src/routes/registration.ts`, controller + service integration
 Micro-task C1: Endpoint contract
 - RED
   - `server/src/__tests__/registration.status.test.ts` with supertest
-  - `GET /api/registration/:nftId` returns `{isRegistered, lastRegistration, integrity, debug}` including `debug.lastTransferHeight`; invalid nftId → 400.
+  - `GET /api/registration/:nftId` returns `{isRegistered, lastRegistration, integrity, debug}` including `debug.{H_parent,H_child,feeHeight,K}`; invalid nftId → 400.
 - GREEN
-  - Implement route + controller calling `getLastTransferHeight` and parser (with `minBlock`); integrate 30s cache layer.
+  - Implement route + controller fetching `H_parent` and `H_child`; call parser with provenance window; integrate 30s cache layer.
 - REFACTOR (planning)
   - Extract cache into utility; metrics hooks.
 
@@ -301,7 +316,7 @@ Micro-task E2: Wallet troubleshooting guide
 - If REFACTOR is identified, add notes to README/scratchpad without code changes
 
 ### Suggested Execution Order
-1) A0 → A1 → A2 → A3 → A4 → (A5 optional) → A6 (server)
+1) A0 → A1 → A2 → A3 → A4 → A6 (server)
 2) Port A1–A6 to client lib parity
 3) B1 → B2 → B3 (+ optional B0 if recursion supports) (template)
 4) C1 → C2 (backend API)
