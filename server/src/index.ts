@@ -1,10 +1,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-// @ts-ignore
-const helmet = require('helmet');
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-// @ts-ignore
-const compression = require('compression');
+import compression from 'compression';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
 import { requestLogger } from './middleware/requestLogger';

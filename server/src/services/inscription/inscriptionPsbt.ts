@@ -318,7 +318,7 @@ export function updateRevealPsbt(
     // Update input hash
     psbt.data.inputs[0] = {
       ...input,
-      // @ts-ignore - accessing internal property
+      // @ts-expect-error - accessing internal property
       hash: hashBuffer
     };
   }

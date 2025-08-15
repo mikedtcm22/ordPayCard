@@ -8,6 +8,7 @@
 /**
  * Typed error hierarchy for parser failures
  */
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ParserError {
   export class InvalidInput extends Error {
     public override readonly name = 'ParserError.InvalidInput';

@@ -27,7 +27,8 @@
     "allowUnreachableCode": false
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "jest.setup.ts"
   ],
   "exclude": [
     "node_modules",

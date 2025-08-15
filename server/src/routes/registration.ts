@@ -4,6 +4,7 @@ const router = Router();
 
 // GET /api/registration/status/:inscriptionId
 // MVP: trust child receipts; validate schema, parent, creator, and fixed fee
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: NextFunction) => {
   const { inscriptionId } = req.params;
   if (!inscriptionId || !/^[a-f0-9]{64}i\d+$/i.test(inscriptionId)) {
@@ -65,6 +66,7 @@ router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: 
 
 // POST /api/registration/create
 // Phase 0 placeholder: returns fee + creator address + instructions
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 router.post('/create', async (_req: Request, res: Response, _next: NextFunction) => {
   const creatorAddr = process.env['CREATOR_WALLET'] || 'tb1q-example-creator-address';
   const fixedFeeSats = parseInt(process.env['REGISTRATION_FEE_SATS'] || '50000', 10);

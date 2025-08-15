@@ -221,7 +221,7 @@ export function validateInscriptionContent(
   }
   
   // Basic MIME type validation
-  const mimePattern = /^[a-zA-Z0-9][a-zA-Z0-9\/\-\+\.]*$/;
+  const mimePattern = /^[a-zA-Z0-9][a-zA-Z0-9/\-+.]*$/;
   const mimeType = contentType.split(';')[0];
   if (!mimeType || !mimePattern.test(mimeType)) {
     return { valid: false, error: 'Invalid content type format' };

@@ -30,7 +30,7 @@ export function isValidAddress(address: string, network?: bitcoin.Network): bool
     // Try to decode the address using bitcoinjs-lib
     bitcoin.address.toOutputScript(address, targetNetwork);
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -75,7 +75,7 @@ export function getAddressType(address: string, network?: bitcoin.Network): Addr
     }
 
     return 'unknown';
-  } catch (error) {
+  } catch {
     return 'unknown';
   }
 }
