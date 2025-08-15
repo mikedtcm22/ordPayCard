@@ -27,13 +27,11 @@
     "allowUnreachableCode": false
   },
   "include": [
-    "src/**/*",
-    "jest.setup.ts"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts",
-    "jest.setup.ts"
+    "**/*.test.ts"
   ]
 } 
