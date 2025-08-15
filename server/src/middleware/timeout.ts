@@ -7,7 +7,7 @@ export function requestTimeout(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
     const timer = setTimeout(() => {
       const requestId = req.id || res.locals['requestId'];
       // Log the timeout event
-      // eslint-disable-next-line no-console
+       
       console.error(
         `[TIMEOUT] Request ${requestId || ''} ${req.method} ${req.originalUrl} exceeded ${timeoutMs}ms`,
       );
