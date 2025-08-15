@@ -38,7 +38,11 @@
       "Bash(chmod:*)",
       "Bash(cargo --version)",
       "Bash(rustc --version)",
-      "Bash(bitcoin-cli:*)"
+      "Bash(bitcoin-cli:*)",
+      "Bash(./scripts/signet-start.sh:*)",
+      "Bash(watch -n 5:*)",
+      "Bash(./scripts/signet-status.sh:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }

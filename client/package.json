@@ -19,6 +19,7 @@
   "dependencies": {
     "@ordzaar/ord-connect": "^8.7.0",
     "@ordzaar/ordit-sdk": "^4.2.4",
+    "@testing-library/dom": "^10.4.1",
     "@types/node": "^24.1.0",
     "autoprefixer": "^10.4.21",
     "bitcoinjs-lib": "^6.1.7",

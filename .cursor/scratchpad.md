@@ -1934,6 +1934,64 @@ Implement and test `getLastTransferHeight(inscriptionId, deps)` with a 30s TTL c
 - # GREEN: Implement `getLastTransferHeight` minimally to satisfy tests.
 - ✅ Commit message on GREEN: `feat: implement last-transfer height derivation with 30s cache to pass tests`
 
+## Planner Update - 2025-08-15: CI Workflow Fix — Root Install + Jest Pin
+
+### Background and Motivation
+Recent GitHub Actions runs failed due to npm workspaces install pattern (using `npm ci` inside `client/` and `server/` where no lockfiles exist) and a likely Jest/ts-jest mismatch (`jest@30` with `ts-jest@29`). We will switch CI to a root install using the monorepo lockfile and align test tooling.
+
+### High-level Task Breakdown (Executor-ready)
+
+1) CI: Root install for server job (uses workspace lockfile)
+- Edit `.github/workflows/ci.yml` → job `server`:
+  - Change `actions/setup-node@v4` `with.cache-dependency-path` to `package-lock.json` (root).
+  - Replace the existing `Install` step:
+    - Remove/skip `npm ci` in `server/`.
+    - Add a new step named `Install (root)` with `run: npm ci` and `working-directory: .`.
+  - Keep `defaults.run.working-directory: server` for subsequent steps.
+  - Leave `Lint`, `Type check`, `Test` steps unchanged.
+
+2) CI: Root install for client job
+- Edit `.github/workflows/ci.yml` → job `client`:
+  - Change `actions/setup-node@v4` `with.cache-dependency-path` to `package-lock.json` (root).
+  - Replace the existing `Install` step:
+    - Remove/skip `npm ci` in `client/`.
+    - Add `Install (root)` step with `run: npm ci` and `working-directory: .`.
+  - Keep `defaults.run.working-directory: client` for lint/type-check/test.
+
+3) Tooling: Align server Jest toolchain
+- In `server/package.json` set versions:
+  - `devDependencies.jest: ^29.7.0`
+  - `devDependencies.ts-jest: ^29.1.1`
+- No changes needed to `server/jest.config.js`.
+- From repo root, run `npm install` to update the root `package-lock.json` (Executor action) and commit lockfile changes.
+
+4) Verification (local)
+- From repo root:
+  - `npm ci` (should succeed and install workspaces).
+  - `npm run test:server` and `npm run test:client` (all tests pass locally).
+
+5) Verification (CI)
+- Push branch and confirm in Actions:
+  - Both jobs show cache keyed to root `package-lock.json`.
+  - `Install (root)` runs once per job and succeeds.
+  - `Lint`, `Type check`, `Test` all pass for `server` and `client`.
+
+### Success Criteria
+- CI green on `main` and PRs: both `server` and `client` jobs pass all steps.
+- Workflow uses root `package-lock.json` for caching and installation.
+- No `npm ci` lockfile errors in subdirectories.
+- Server tests run with Jest 29 + ts-jest 29 without version errors.
+
+### Project Status Board — CI Fix
+- [ ] CI: Update `server` job to root install + cache path
+- [ ] CI: Update `client` job to root install + cache path
+- [ ] Tooling: Pin `jest@^29.7.0` and `ts-jest@^29.1.1` in `server`
+- [ ] Local verify: root `npm ci` + client/server tests
+- [ ] CI verify: both jobs green on PR
+
+### Executor's Feedback or Assistance Requests
+- If CI still fails after these edits, paste the last 50 lines of the failing step logs into the scratchpad and flag which job (`server` or `client`) failed so we can adjust quickly (e.g., Vitest/Jest reporters or Node version).
+
 ## Executor Progress - 2025-08-14: A0 Last-transfer Height — RED
 
 ### What I did
