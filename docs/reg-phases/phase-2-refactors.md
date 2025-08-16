@@ -44,8 +44,8 @@ This document consolidates refactoring items identified during Phase 2 implement
 - Problem: Cache, metrics, and error handling are in-route and not standardized. Configuration is scattered.
 - Tasks:
   - [x] Extract in-route cache to a shared utility/module for reuse.
-  - [ ] Add structured error responses and centralized error handling for the route.
-  - [ ] Introduce lightweight metrics hooks (request timing, cache hit ratio).
+  - [x] Add structured error responses and centralized error handling for the route.
+  - [x] Introduce lightweight metrics hooks (request timing, cache hit ratio).
   - [ ] Centralize configuration (timeouts, TTL, endpoints) in a single config module.
   - [ ] Abstract ord endpoint calls into a service layer for easier testing/mocking.
 - Success criteria:

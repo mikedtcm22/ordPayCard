@@ -7,6 +7,7 @@ import { normalizeRegistration } from '../types/registration';
 import { SimpleCache } from '../utils/cache';
 import { ApiError, ErrorCodes, asyncHandler } from '../middleware/errorHandler';
 import * as defaultMetrics from '../utils/metrics';
+import { getConfig } from '../config';
 
 // Metrics functions interface for dependency injection
 export interface MetricsFunctions {
@@ -24,9 +25,11 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
   // Use injected metrics or default singleton
   const { recordRequest, recordCacheOperation, triggerHook } = metrics || defaultMetrics;
 
+  // Get configuration
+  const config = getConfig();
+
   // Phase 2 enhanced validation cache for status endpoint
-  const STATUS_CACHE_MS = 30_000; // 30 seconds
-  const statusCache = new SimpleCache<unknown>({ ttlMs: STATUS_CACHE_MS });
+  const statusCache = new SimpleCache<unknown>({ ttlMs: config.cache.status.ttl });
 
   // GET /api/registration/:nftId (Phase 2 Enhanced Validation)
   // Implements provenance gating, OP_RETURN validation, and debug info
@@ -102,12 +105,12 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
       }
     }
 
-    const fetchMeta = async (id: string) => fetchJson(`http://localhost:8080/r/metadata/${id}`);
-    const fetchTx = async (txid: string) => fetchJson(`http://localhost:8080/r/tx/${txid}`);
+    const fetchMeta = async (id: string) => fetchJson(`${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.metadataPath}${id}`);
+    const fetchTx = async (txid: string) => fetchJson(`${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.txPath}${txid}`);
     const fetchChildren = async (id: string) => {
       const variants = [
-        `http://localhost:8080/r/children/${id}/inscriptions`,
-        `http://localhost:8080/r/children/${id}`,
+        `${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.childrenPath}${id}/inscriptions`,
+        `${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.childrenPath}${id}`,
       ];
       for (const url of variants) {
         const data = await fetchJson(url);
@@ -128,10 +131,10 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
     const H_child = await getLatestChildHeight(nftId, { fetchChildren });
     
     // Configuration
-    const creatorAddr = process.env['CREATOR_WALLET'] || '';
-    const fixedFeeSats = BigInt(parseInt(process.env['REGISTRATION_FEE_SATS'] || '50000', 10));
-    const K = parseInt(process.env['PROVENANCE_WINDOW_K'] || '1', 10);
-    const currentBlock = parseInt(process.env['CURRENT_BLOCK_HEIGHT'] || '1000', 10);
+    const creatorAddr = config.registration.fees.creatorWallet;
+    const fixedFeeSats = BigInt(config.registration.fees.registrationSats);
+    const K = config.registration.provenance.windowK;
+    const currentBlock = config.registration.provenance.currentBlockHeight;
 
     // Fetch children and validate registrations
     const children = await fetchChildren(nftId);
@@ -147,7 +150,7 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
         const childObj = child as Record<string, unknown>;
         if (!childObj['id']) continue;
         
-        const reg = await fetchJson(`http://localhost:8080/content/${childObj['id']}`);
+        const reg = await fetchJson(`${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.contentPath}${childObj['id']}`);
         if (!reg || typeof reg !== 'object') continue;
         const regObj = reg as Record<string, unknown>;
         if (regObj['schema'] !== 'buyer_registration.v1') continue;
@@ -192,7 +195,7 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
               if (!child || typeof child !== 'object') continue;
               const childObj = child as Record<string, unknown>;
               if (!childObj['id']) continue;
-              const reg = await fetchJson(`http://localhost:8080/content/${childObj['id']}`);
+              const reg = await fetchJson(`${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.contentPath}${childObj['id']}`);
               if (reg && typeof reg === 'object' && (reg as Record<string, unknown>)['feeTxid'] === feeTxid) {
                 const rawReg = { ...reg, childId: childObj['id'], verifiedAmount: verifiedAmount.toString() };
                 lastRegistration = normalizeRegistration(rawReg);
@@ -282,8 +285,8 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
   }
 
   try {
-    const creatorAddr = process.env['CREATOR_WALLET'] || '';
-    const fixedFeeSats = parseInt(process.env['REGISTRATION_FEE_SATS'] || '50000', 10);
+    const creatorAddr = config.registration.fees.creatorWallet;
+    const fixedFeeSats = config.registration.fees.registrationSats;
 
     async function fetchJson(url: string): Promise<unknown | null> {
       try {
@@ -312,8 +315,8 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
 
     // Try both ord endpoint variants to list children
     const variants = [
-      `http://localhost:8080/r/children/${inscriptionId}/inscriptions`,
-      `http://localhost:8080/r/children/${inscriptionId}`,
+      `${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.childrenPath}${inscriptionId}/inscriptions`,
+      `${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.childrenPath}${inscriptionId}`,
     ];
     let childIds: string[] = [];
     for (const u of variants) {
@@ -332,7 +335,7 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
 
     let lastRegistration: unknown = null;
     for (const cid of childIds) {
-      const reg = await fetchJson(`http://localhost:8080/content/${cid}`);
+      const reg = await fetchJson(`${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.contentPath}${cid}`);
       if (!reg || typeof reg !== 'object') continue;
       const regObj = reg as Record<string, unknown>;
       if (regObj['schema'] !== 'buyer_registration.v1') continue;
@@ -377,8 +380,8 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
   // Phase 0 placeholder: returns fee + creator address + instructions
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   router.post('/create', async (_req: Request, res: Response, _next: NextFunction) => {
-  const creatorAddr = process.env['CREATOR_WALLET'] || 'tb1q-example-creator-address';
-  const fixedFeeSats = parseInt(process.env['REGISTRATION_FEE_SATS'] || '50000', 10);
+  const creatorAddr = config.registration.fees.creatorWallet || 'tb1q-example-creator-address';
+  const fixedFeeSats = config.registration.fees.registrationSats;
 
   res.json({
     fee: { amountSats: fixedFeeSats, currency: 'sats' },

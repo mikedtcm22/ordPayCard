@@ -213,6 +213,14 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - **Network Abstraction**: ord endpoint calls should be abstracted into service layer for easier testing and mocking
 - **Response Optimization**: Consider partial response caching to reduce computation for frequently accessed debug fields
 
+### REFACTOR Notes for C1 - Error Handling (Completed)
+- **Error Categorization**: Consider adding more specific error codes (e.g., `INSCRIPTION_NOT_FOUND`, `CACHE_ERROR`) for better granularity
+- **Error Logging**: Add structured logging when errors occur to help with debugging and monitoring
+- **Error Response Consistency**: Consider adding timestamps to error responses for debugging correlation
+- **Performance**: Current error handler creates new error objects which is fine, but could consider factory pattern for common errors
+- **Documentation**: Add JSDoc comments for all error codes and their meanings to improve maintainability
+- **Type Safety**: Create TypeScript types for error responses to ensure consistency across the API
+
 ### REFACTOR Notes for C2
 - **Centralized Cache Service**: Extract status cache into shared `CacheService` class with TTL management, LRU eviction, and metrics
 - **Test Strategy Evolution**: Observable behavior testing proved more reliable than network mocking; standardize this pattern for integration tests
