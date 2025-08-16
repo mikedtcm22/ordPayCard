@@ -34,7 +34,7 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
     // Dependencies for parser utilities
     async function fetchJson(url: string): Promise<unknown | null> {
       try {
-        const r = await fetch(url, { redirect: 'follow' as RequestRedirect });
+        const r = await fetch(url, { redirect: 'follow' });
         if (!r.ok) return null;
         const txt = await r.text();
         try { return JSON.parse(txt); } catch { return null; }
@@ -50,12 +50,12 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
       ];
       for (const url of variants) {
         const data = await fetchJson(url);
-        if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).children)) {
-          const children = (data as Record<string, unknown>).children as unknown[];
+        if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['children'])) {
+          const children = (data as Record<string, unknown>)['children'] as unknown[];
           return children.map((c: unknown) => (c && typeof c === 'object' ? c : { id: c }));
         }
-        if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).ids)) {
-          const ids = (data as Record<string, unknown>).ids as string[];
+        if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['ids'])) {
+          const ids = (data as Record<string, unknown>)['ids'] as string[];
           return ids.map((id: string) => ({ id }));
         }
       }
@@ -82,15 +82,18 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
       const feeTxids: string[] = [];
       
       for (const child of children) {
-        if (!child || !child.id) continue;
+        if (!child || typeof child !== 'object') continue;
+        const childObj = child as Record<string, unknown>;
+        if (!childObj['id']) continue;
         
-        const reg = await fetchJson(`http://localhost:8080/content/${child.id}`);
+        const reg = await fetchJson(`http://localhost:8080/content/${childObj['id']}`);
         if (!reg || typeof reg !== 'object') continue;
-        if (reg.schema !== 'buyer_registration.v1') continue;
-        if (reg.parent !== nftId) continue;
-        if (!reg.feeTxid) continue;
+        const regObj = reg as Record<string, unknown>;
+        if (regObj['schema'] !== 'buyer_registration.v1') continue;
+        if (regObj['parent'] !== nftId) continue;
+        if (!regObj['feeTxid']) continue;
         
-        feeTxids.push(reg.feeTxid);
+        feeTxids.push(regObj['feeTxid'] as string);
       }
 
       // Deduplicate fee transactions
@@ -109,12 +112,14 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
               network: 'regtest',
               fetchTx: async (txid: string) => {
                 const tx = await fetchTx(txid);
-                return tx?.hex || null;
+                const hex = tx && typeof tx === 'object' ? (tx as Record<string, unknown>)['hex'] as string : null;
+                return hex || ''; // Return empty string instead of null to match expected type
               },
               minBlock: H_child,
               txBlockHeight: await (async () => {
                 const tx = await fetchTx(feeTxid);
-                return tx?.block_height || null;
+                const blockHeight = tx && typeof tx === 'object' ? (tx as Record<string, unknown>)['block_height'] as number : null;
+                return blockHeight || 0; // Return 0 instead of null to match expected type
               })(),
             }
           );
@@ -123,10 +128,12 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
             isRegistered = true;
             // Find the registration data for this txid
             for (const child of children) {
-              if (!child?.id) continue;
-              const reg = await fetchJson(`http://localhost:8080/content/${child.id}`);
-              if (reg?.feeTxid === feeTxid) {
-                lastRegistration = { ...reg, childId: child.id, verifiedAmount: verifiedAmount.toString() };
+              if (!child || typeof child !== 'object') continue;
+              const childObj = child as Record<string, unknown>;
+              if (!childObj['id']) continue;
+              const reg = await fetchJson(`http://localhost:8080/content/${childObj['id']}`);
+              if (reg && typeof reg === 'object' && (reg as Record<string, unknown>)['feeTxid'] === feeTxid) {
+                lastRegistration = { ...reg, childId: childObj['id'], verifiedAmount: verifiedAmount.toString() };
                 break;
               }
             }
@@ -141,10 +148,10 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
 
     // Determine fee height for debug
     let feeHeight: number | null = null;
-    if (lastRegistration?.feeTxid) {
+    if (lastRegistration && typeof lastRegistration === 'object' && (lastRegistration as Record<string, unknown>)['feeTxid']) {
       try {
-        const tx = await fetchTx(lastRegistration.feeTxid);
-        feeHeight = tx?.block_height || null;
+        const tx = await fetchTx((lastRegistration as Record<string, unknown>)['feeTxid'] as string);
+        feeHeight = tx && typeof tx === 'object' ? (tx as Record<string, unknown>)['block_height'] as number || null : null;
       } catch {
         // Ignore errors
       }
@@ -192,7 +199,7 @@ router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: 
 
     async function fetchJson(url: string): Promise<unknown | null> {
       try {
-        const r = await fetch(url, { redirect: 'follow' as RequestRedirect });
+        const r = await fetch(url, { redirect: 'follow' });
         if (!r.ok) return null;
         const txt = await r.text();
         try { return JSON.parse(txt); } catch { return null; }
@@ -207,14 +214,14 @@ router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: 
     let childIds: string[] = [];
     for (const u of variants) {
       const data = await fetchJson(u);
-      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).children)) {
+      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['children'])) {
         // Newer ord returns objects; older may return strings
-        const children = (data as Record<string, unknown>).children as unknown[];
-        childIds = children.map((c: unknown) => (c && typeof c === 'object' ? (c as Record<string, unknown>).id as string : c as string)).filter(Boolean);
+        const children = (data as Record<string, unknown>)['children'] as unknown[];
+        childIds = children.map((c: unknown) => (c && typeof c === 'object' ? (c as Record<string, unknown>)['id'] as string : c as string)).filter(Boolean);
         break;
       }
-      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).ids)) { 
-        childIds = (data as Record<string, unknown>).ids as string[]; 
+      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['ids'])) { 
+        childIds = (data as Record<string, unknown>)['ids'] as string[]; 
         break; 
       }
     }
@@ -224,10 +231,10 @@ router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: 
       const reg = await fetchJson(`http://localhost:8080/content/${cid}`);
       if (!reg || typeof reg !== 'object') continue;
       const regObj = reg as Record<string, unknown>;
-      if (regObj.schema !== 'buyer_registration.v1') continue;
-      if (regObj.parent !== inscriptionId) continue;
-      if (creatorAddr && regObj.paid_to && regObj.paid_to !== creatorAddr) continue;
-      if (typeof regObj.fee_sats === 'number' && regObj.fee_sats < fixedFeeSats) continue;
+      if (regObj['schema'] !== 'buyer_registration.v1') continue;
+      if (regObj['parent'] !== inscriptionId) continue;
+      if (creatorAddr && regObj['paid_to'] && regObj['paid_to'] !== creatorAddr) continue;
+      if (typeof regObj['fee_sats'] === 'number' && regObj['fee_sats'] < fixedFeeSats) continue;
       lastRegistration = { ...regObj, childId: cid };
     }
 
