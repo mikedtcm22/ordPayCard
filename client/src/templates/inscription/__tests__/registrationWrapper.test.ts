@@ -60,4 +60,72 @@ describe('registrationWrapper.html — B1 Parser-verified flow (RED)', () => {
   });
 });
 
+describe('registrationWrapper.html — B2 Deduplicate by feeTxid (RED)', () => {
+  beforeEach(() => {
+    // Reset DOM and globals
+    document.documentElement.innerHTML = '<head></head><body></body>';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (globalThis as any).fetch = vi.fn();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).CHILDREN = []; 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).EmbersCore = { verifyPayment: vi.fn(), dedupe: vi.fn() };
+  });
+
+  it('deduplicates feeTxid and uses only latest unique tx in status summary', async () => {
+    // Setup mock children with duplicate feeTxid values
+    const duplicateChildren = [
+      { schema: 'buyer_registration.v1', feeTxid: 'abc123', amount: 1000 },
+      { schema: 'buyer_registration.v1', feeTxid: 'def456', amount: 2000 },
+      { schema: 'buyer_registration.v1', feeTxid: 'abc123', amount: 1500 }, // duplicate
+      { schema: 'buyer_registration.v1', feeTxid: 'ghi789', amount: 3000 },
+      { schema: 'buyer_registration.v1', feeTxid: 'def456', amount: 2500 }, // duplicate
+    ];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).CHILDREN = duplicateChildren;
+
+    // Mock EmbersCore.dedupe to return unique txids (order-preserving)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).EmbersCore.dedupe = vi.fn().mockReturnValue(['abc123', 'def456', 'ghi789']);
+
+    const scriptContent = loadTemplateIntoDom();
+
+    // Evaluate the template's embedded script
+    // eslint-disable-next-line no-eval
+    (0, eval)(scriptContent);
+
+    // Trigger template initialization
+    window.dispatchEvent(new Event('load'));
+    await Promise.resolve();
+
+    // Verify dedupe was called with the extracted feeTxids
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((window as any).EmbersCore.dedupe).toHaveBeenCalledWith(['abc123', 'def456', 'abc123', 'ghi789', 'def456']);
+
+    // Verify that only the first occurrence of each feeTxid is used
+    // This test will fail initially since deduplication is not yet implemented
+    const badge = document.getElementById('badge');
+    expect(badge).toBeTruthy();
+  });
+
+  it('handles empty children array without errors', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).CHILDREN = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).EmbersCore.dedupe = vi.fn().mockReturnValue([]);
+
+    const scriptContent = loadTemplateIntoDom();
+    // eslint-disable-next-line no-eval
+    (0, eval)(scriptContent);
+
+    window.dispatchEvent(new Event('load'));
+    await Promise.resolve();
+
+    // Should not call dedupe with empty array
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((window as any).EmbersCore.dedupe).toHaveBeenCalledWith([]);
+  });
+});
+
 

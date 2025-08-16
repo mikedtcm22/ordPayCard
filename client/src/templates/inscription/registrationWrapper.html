@@ -102,11 +102,49 @@
       }
 
       function findRegistration(children) {
-        // Phase-0 trusts child receipts if present; return first match
+        // Phase-2: Deduplicate by feeTxid before processing
+        var feeTxids = [];
+        var registrations = [];
+        
+        // Extract feeTxids and collect valid registrations
         for (var i = 0; i < children.length; i++) {
           var c = children[i];
-          if (c && c.schema === 'buyer_registration.v1') return c;
+          if (c && c.schema === 'buyer_registration.v1') {
+            registrations.push(c);
+            if (c.feeTxid) {
+              feeTxids.push(c.feeTxid);
+            }
+          }
         }
+        
+        // Deduplicate feeTxids using EmbersCore.dedupe if available
+        var uniqueTxids = feeTxids;
+        if (window.EmbersCore && typeof window.EmbersCore.dedupe === 'function') {
+          try {
+            uniqueTxids = window.EmbersCore.dedupe(feeTxids);
+          } catch (e) {
+            // Fall back to original list if dedupe fails
+            uniqueTxids = feeTxids;
+          }
+        }
+        
+        // Return first registration with unique feeTxid (order-preserving)
+        for (var j = 0; j < uniqueTxids.length; j++) {
+          var txid = uniqueTxids[j];
+          for (var k = 0; k < registrations.length; k++) {
+            var reg = registrations[k];
+            if (reg.feeTxid === txid) {
+              return reg;
+            }
+          }
+        }
+        
+        // Fallback to first valid registration without feeTxid
+        for (var l = 0; l < registrations.length; l++) {
+          var fallback = registrations[l];
+          if (!fallback.feeTxid) return fallback;
+        }
+        
         return null;
       }
 
