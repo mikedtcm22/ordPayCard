@@ -121,7 +121,10 @@
         var uniqueTxids = feeTxids;
         if (window.EmbersCore && typeof window.EmbersCore.dedupe === 'function') {
           try {
-            uniqueTxids = window.EmbersCore.dedupe(feeTxids);
+            var deduped = window.EmbersCore.dedupe(feeTxids);
+            if (deduped && Array.isArray(deduped)) {
+              uniqueTxids = deduped;
+            }
           } catch (e) {
             // Fall back to original list if dedupe fails
             uniqueTxids = feeTxids;
@@ -195,6 +198,81 @@
         return 0n;
       }
 
+      function attachDebugInfo(inputs, outputs) {
+        // B3: Developer debug flag implementation
+        try {
+          if (window.DEBUG === 1 || window.DEBUG === true) {
+            // Filter out PII fields from inputs
+            var sanitizedInputs = {};
+            // Always include selfId even if null
+            if (inputs) {
+              sanitizedInputs.selfId = inputs.selfId || null;
+            }
+            if (inputs && inputs.children && Array.isArray(inputs.children)) {
+              // Remove PII fields like buyer_email, buyer_name from children
+              sanitizedInputs.children = inputs.children.map(function(child) {
+                if (!child || typeof child !== 'object') return child;
+                var sanitized = {};
+                for (var key in child) {
+                  if (key && typeof key === 'string' &&
+                      key.indexOf('buyer_email') === -1 && 
+                      key.indexOf('buyer_name') === -1 &&
+                      key.indexOf('email') === -1 &&
+                      key.indexOf('name') === -1) {
+                    sanitized[key] = child[key];
+                  }
+                }
+                return sanitized;
+              });
+            }
+
+            // Convert BigInt to string and remove PII from outputs
+            var sanitizedOutputs = {};
+            if (outputs) {
+              for (var outputKey in outputs) {
+                var value = outputs[outputKey];
+                if (typeof value === 'bigint') {
+                  sanitizedOutputs[outputKey] = value.toString();
+                } else if (value && typeof value === 'object') {
+                  // Sanitize object fields to remove PII
+                  var sanitizedValue = {};
+                  for (var key in value) {
+                    if (key && typeof key === 'string' &&
+                        key.indexOf('buyer_email') === -1 && 
+                        key.indexOf('buyer_name') === -1 &&
+                        key.indexOf('email') === -1 &&
+                        key.indexOf('name') === -1) {
+                      sanitizedValue[key] = value[key];
+                    }
+                  }
+                  sanitizedOutputs[outputKey] = sanitizedValue;
+                } else {
+                  sanitizedOutputs[outputKey] = value;
+                }
+              }
+            }
+
+            window.__debug = {
+              lastInputs: sanitizedInputs,
+              lastOutputs: sanitizedOutputs,
+              timestamp: new Date().toISOString()
+            };
+
+            // Include provenance diagnostics if available
+            if (window.PROVENANCE_DIAGNOSTICS && typeof window.PROVENANCE_DIAGNOSTICS === 'object') {
+              window.__debug.provenance = window.PROVENANCE_DIAGNOSTICS;
+            }
+          } else if (window.DEBUG === 0 || window.DEBUG === false) {
+            // Remove debug object when DEBUG is explicitly false
+            if (window.__debug) {
+              delete window.__debug;
+            }
+          }
+        } catch (e) {
+          // Silent failure in debug attachment
+        }
+      }
+
       async function checkRegistration() {
         var selfId = parseSelfId();
         // Best-effort children load (legacy receipts), non-blocking for B1 path
@@ -202,8 +280,15 @@
         var reg = findRegistration(children);
         var paid = await verifyPaymentAmount(selfId);
         var isRegistered = (typeof paid === 'bigint' ? paid > 0n : Number(paid) > 0) || !!reg;
+        
+        var inputs = { selfId: selfId, children: children };
+        var outputs = { isRegistered: isRegistered, lastRegistration: reg, paidSats: paid };
+        
+        // Attach debug info if enabled
+        attachDebugInfo(inputs, outputs);
+        
         render(isRegistered, paid);
-        return { isRegistered: isRegistered, lastRegistration: reg, paidSats: paid };
+        return outputs;
       }
 
       window.registrationStatus = checkRegistration;
