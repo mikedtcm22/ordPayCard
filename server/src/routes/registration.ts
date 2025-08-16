@@ -3,6 +3,7 @@ import { getLastTransferHeight } from '../services/registration/parser/lastTrans
 import { getLatestChildHeight } from '../services/registration/parser/latestChildHeight';
 import { verifyPayment } from '../services/registration/parser/verifyPayment';
 import { dedupeTxids } from '../services/registration/parser/dedupe';
+import { normalizeRegistration } from '../types/registration';
 
 const router = Router();
 
@@ -133,7 +134,8 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
               if (!childObj['id']) continue;
               const reg = await fetchJson(`http://localhost:8080/content/${childObj['id']}`);
               if (reg && typeof reg === 'object' && (reg as Record<string, unknown>)['feeTxid'] === feeTxid) {
-                lastRegistration = { ...reg, childId: childObj['id'], verifiedAmount: verifiedAmount.toString() };
+                const rawReg = { ...reg, childId: childObj['id'], verifiedAmount: verifiedAmount.toString() };
+                lastRegistration = normalizeRegistration(rawReg);
                 break;
               }
             }
@@ -235,7 +237,8 @@ router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: 
       if (regObj['parent'] !== inscriptionId) continue;
       if (creatorAddr && regObj['paid_to'] && regObj['paid_to'] !== creatorAddr) continue;
       if (typeof regObj['fee_sats'] === 'number' && regObj['fee_sats'] < fixedFeeSats) continue;
-      lastRegistration = { ...regObj, childId: cid };
+      const rawReg = { ...regObj, childId: cid };
+      lastRegistration = normalizeRegistration(rawReg);
     }
 
     const isRegistered = !!lastRegistration;
