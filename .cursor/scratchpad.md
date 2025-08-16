@@ -44,7 +44,7 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 #### **Track B: NFT Template Updates**
 - ✅ B1: Parser-verified flow returns 0 sats on OP_RETURN missing/mismatch/expired
 - ✅ B2: Deduplicate by `feeTxid`
-- [ ] B3: Developer debug flag
+- ✅ B3: Developer debug flag
 
 #### **Track C: Backend Status API**
 - [ ] C1: Endpoint contract with provenance gating
@@ -64,10 +64,9 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 ### Current Status / Progress Tracking
 - [x] **Phase 1 Complete**: Project foundation, Bitcoin integration, development environment
 - [x] **Track A Complete**: Server parser library with all utilities and tests
-- [x] **B1 Complete**: Template parser-verified flow implementation
-- [x] **B2 Complete**: Template feeTxid deduplication implementation
-- [ ] **In Progress**: B3 - Developer debug flag
-- [ ] **Pending**: C1-C2, D1-D3, E1-E2
+- [x] **Track B Complete**: Template updates with parser integration, deduplication, and debug features
+- [ ] **In Progress**: C1 - Backend status API endpoint contract
+- [ ] **Pending**: C2, D1-D3, E1-E2
 
 ### TDD Progress Summary
 **Completed (GREEN)**:
@@ -79,12 +78,13 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - A6: Defensive parsing with `ParserError` types and timeouts
 - B1: Template integration with `EmbersCore.verifyPayment` mock
 - B2: Template feeTxid deduplication with `EmbersCore.dedupe` integration
+- B3: Developer debug flag with PII-safe diagnostic information
 
-**Current**: B3 - Developer debug flag
+**Current**: C1 - Backend status API endpoint contract
 
 ### Development Environment Status
 - **Node.js**: v22.17.1 (NVM managed)
-- **Testing**: 159 total tests passing (server: 143, client: 16)
+- **Testing**: 166 total tests passing (server: 143, client: 23)
 - **CI/CD**: Fully operational with strict linting enforcement
 - **Docker**: Development and production configurations ready
 
@@ -110,17 +110,19 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 
 ## Executor's Feedback or Assistance Requests
 
-### Current Task: B3 - Developer Debug Flag
+### Current Task: C1 - Backend Status API Endpoint Contract
 
-**Objective**: Include debug info for developers when DEBUG flag is enabled
+**Objective**: Implement status endpoint with provenance gating and debug info
 
 **Next Steps**:
-1. **RED**: Add test for `window.__debug` when `DEBUG=1` flag is set
-2. **GREEN**: Implement gated debug info attachment
-3. **REFACTOR**: Document debug keys, avoid PII
+1. **RED**: Add test for `GET /api/registration/:nftId` endpoint contract
+2. **GREEN**: Implement route + controller with provenance window integration
+3. **REFACTOR**: Extract cache into utility, add metrics hooks
 
 ### Key Implementation Notes
 - Template now calls `EmbersCore.verifyPayment` and displays results
+- Template deduplicates feeTxids using `EmbersCore.dedupe` before processing
+- Developer debug flag exposes sanitized diagnostic information via `window.__debug`
 - Vitest module alias resolution fixed to match Vite config
 - All server parser utilities have comprehensive test coverage
 - Cache implementations use 30s TTL with per-inscription isolation
@@ -147,12 +149,19 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - **Error Handling**: Template gracefully falls back when EmbersCore.dedupe fails or is unavailable
 - **Performance**: O(n²) lookup acceptable for small children arrays; consider Map-based optimization for larger datasets
 
+### REFACTOR Notes for B3
+- **Debug Keys**: `window.__debug` contains `{lastInputs, lastOutputs, timestamp, provenance?}` with sanitized data
+- **PII Avoidance**: Filters out `buyer_email`, `buyer_name`, and variations; applies to both inputs and outputs recursively
+- **Serialization**: BigInt values converted to strings for JSON compatibility; handles nested object sanitization
+- **Timing**: Debug attachment occurs after all async operations complete for accurate diagnostic capture
+- **Security**: Debug object only created when `DEBUG=1` or `DEBUG=true`; explicitly removed when `DEBUG=false`
+- **Performance**: PII filtering has O(n) complexity per object; acceptable for debug-only usage
+
 ## Next Steps
 
-1. **Implement B3**: Developer debug flag with diagnostics
-2. **Backend API**: C1-C2 status endpoint with caching
-3. **Embers Core**: D1-D3 on-chain library preparation
-4. **Documentation**: E1-E2 tooling and troubleshooting guides
+1. **Backend API**: C1-C2 status endpoint with caching and provenance gating
+2. **Embers Core**: D1-D3 on-chain library preparation
+3. **Documentation**: E1-E2 tooling and troubleshooting guides
 
 ---
 
