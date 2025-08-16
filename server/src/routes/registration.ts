@@ -4,7 +4,7 @@ import { getLatestChildHeight } from '../services/registration/parser/latestChil
 import { verifyPayment } from '../services/registration/parser/verifyPayment';
 import { dedupeTxids } from '../services/registration/parser/dedupe';
 import { normalizeRegistration } from '../types/registration';
-import { SimpleCache } from '../utils/cache';
+import { CacheService } from '../services/cache.service';
 import { ApiError, ErrorCodes, asyncHandler } from '../middleware/errorHandler';
 import * as defaultMetrics from '../utils/metrics';
 import { getConfig } from '../config';
@@ -20,6 +20,7 @@ export interface MetricsFunctions {
 // Optional service injection for testing
 export interface ServiceDependencies {
   ordinalsService?: OrdinalsService;
+  cacheService?: CacheService;
 }
 
 /**
@@ -39,9 +40,13 @@ export function createRegistrationRouter(
   
   // Initialize services
   const ordinalsService = services?.ordinalsService || new OrdinalsService(config);
-
-  // Phase 2 enhanced validation cache for status endpoint
-  const statusCache = new SimpleCache<unknown>({ ttlMs: config.cache.status.ttl });
+  const cacheService = services?.cacheService || new CacheService();
+  
+  // Configure cache with settings from config
+  cacheService.configure('status', {
+    ttl: config.cache.status.ttl,
+    maxSize: config.cache.status.maxSize
+  });
 
   // GET /api/registration/:nftId (Phase 2 Enhanced Validation)
   // Implements provenance gating, OP_RETURN validation, and debug info
@@ -73,7 +78,7 @@ export function createRegistrationRouter(
 
   try {
     // Check cache first
-    const cached = statusCache.get(nftId);
+    const cached = cacheService.get(nftId, 'status');
     if (cached) {
       recordCacheOperation(true, nftId);
       const duration = Math.max(1, Date.now() - startTime);
@@ -210,7 +215,7 @@ export function createRegistrationRouter(
     };
 
     // Cache the response
-    statusCache.set(nftId, response);
+    cacheService.set(nftId, response, 'status');
     
     // Record metrics
     const duration = Math.max(1, Date.now() - startTime);
