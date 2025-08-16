@@ -4,13 +4,13 @@ import { getLatestChildHeight } from '../services/registration/parser/latestChil
 import { verifyPayment } from '../services/registration/parser/verifyPayment';
 import { dedupeTxids } from '../services/registration/parser/dedupe';
 import { normalizeRegistration } from '../types/registration';
+import { SimpleCache } from '../utils/cache';
 
 const router = Router();
 
 // Phase 2 enhanced validation cache for status endpoint
 const STATUS_CACHE_MS = 30_000; // 30 seconds
-type StatusCacheEntry = { data: unknown; expiresAtMs: number };
-const statusCache: Map<string, StatusCacheEntry> = new Map();
+const statusCache = new SimpleCache<unknown>({ ttlMs: STATUS_CACHE_MS });
 
 // GET /api/registration/:nftId (Phase 2 Enhanced Validation)
 // Implements provenance gating, OP_RETURN validation, and debug info
@@ -25,10 +25,9 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
 
   try {
     // Check cache first
-    const now = Date.now();
     const cached = statusCache.get(nftId);
-    if (cached && now < cached.expiresAtMs) {
-      res.json(cached.data);
+    if (cached) {
+      res.json(cached);
       return;
     }
 
@@ -177,7 +176,7 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
     };
 
     // Cache the response
-    statusCache.set(nftId, { data: response, expiresAtMs: now + STATUS_CACHE_MS });
+    statusCache.set(nftId, response);
     
     res.json(response);
   } catch (err) {
