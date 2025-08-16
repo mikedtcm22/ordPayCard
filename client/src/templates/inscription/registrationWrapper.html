@@ -24,8 +24,8 @@
       <div class="wm" id="wm">Unregistered</div>
     </div>
     <div class="status">
-      <div>Embers v0 stub • <span id="id">INSCRIPTION_ID</span></div>
-      <div class="badge unreg" id="badge">Unregistered</div>
+      <div>Embers v0 stub • <span id="id">INSCRIPTION_ID</span> • Paid: <span id="paid">0 sats</span></div>
+      <div class="badge unreg" id="badge">Not Registered</div>
     </div>
   </div>
 
@@ -110,15 +110,23 @@
         return null;
       }
 
-      function render(isRegistered) {
+      function render(isRegistered, amountSats) {
         var media = document.getElementById('media');
         var badge = document.getElementById('badge');
         var wm = document.getElementById('wm');
         var ph = document.getElementById('ph');
+        var paid = document.getElementById('paid');
 
         // Clear existing image
         var imgs = media.getElementsByTagName('img');
         if (imgs[0]) media.removeChild(imgs[0]);
+
+        if (paid) {
+          try {
+            var v = (amountSats === undefined || amountSats === null) ? '0' : String(amountSats);
+            paid.textContent = v + ' sats';
+          } catch (_) { paid.textContent = '0 sats'; }
+        }
 
         if (isRegistered) {
           var img = new Image();
@@ -130,18 +138,34 @@
           if (ph) ph.style.display = 'none';
         } else {
           badge.className = 'badge unreg';
-          badge.textContent = 'Unregistered';
+          badge.textContent = 'Not Registered';
           wm.style.display = 'flex';
           if (ph) ph.style.display = 'flex';
         }
       }
 
+      async function verifyPaymentAmount(nftId) {
+        try {
+          if (window.EmbersCore && typeof window.EmbersCore.verifyPayment === 'function') {
+            // Minimal call; real arguments wired in later phases
+            var amt = await window.EmbersCore.verifyPayment('', '', 0n, nftId || '', { currentBlock: 0, network: 'regtest' });
+            if (typeof amt === 'bigint') return amt;
+            var n = Number(amt || 0);
+            return BigInt(isNaN(n) ? 0 : n);
+          }
+        } catch (_) { /* fall through */ }
+        return 0n;
+      }
+
       async function checkRegistration() {
+        var selfId = parseSelfId();
+        // Best-effort children load (legacy receipts), non-blocking for B1 path
         var children = await getChildren();
         var reg = findRegistration(children);
-        var isRegistered = !!reg;
-        render(isRegistered);
-        return { isRegistered: isRegistered, lastRegistration: reg };
+        var paid = await verifyPaymentAmount(selfId);
+        var isRegistered = (typeof paid === 'bigint' ? paid > 0n : Number(paid) > 0) || !!reg;
+        render(isRegistered, paid);
+        return { isRegistered: isRegistered, lastRegistration: reg, paidSats: paid };
       }
 
       window.registrationStatus = checkRegistration;

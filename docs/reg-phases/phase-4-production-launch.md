@@ -43,12 +43,14 @@ Purpose: Ship mainnet-ready registration system with operational guardrails, sec
   - [ ] Audit parser code paths for buffer handling and bounds checks
   - [ ] Add abuse protections (rate-limit, bot filters)
   - [ ] Log redaction, PII review (if any)
+  - [ ] Enforce marketplace/private mode rules in production: fee must spend sale marker; fee OP_RETURN recommit present with buyer_pubkey; policy/K windows observed
 
 - Product
   - [ ] Creator docs: fees, OP_RETURN requirement, step-by-step wallet guides
-  - [ ] Partner integration playbook (marketplace SDK + examples)
+  - [ ] Partner integration playbook (marketplace SDK + examples): marketplace-gated marker flow, buyer recommit in fee, private PSBT reveal, CPFP packaging, short K window
   - [ ] Public status page and incident handbook
   - [ ] Library versioning guide (semantic versioning mapped to child indices)
+  - [ ] Monitoring dashboards: fee-omitted/misconstructed rates per marketplace; cache hit ratio; registration success latency
 
 ----
 
@@ -57,6 +59,7 @@ Purpose: Ship mainnet-ready registration system with operational guardrails, sec
 - P95 status API ≤ 1s with 200 registrations
 - Zero critical security findings outstanding
  - Library upgrade (new child) rolls out without breaking existing parents
+ - Marketplace flow: registrations only succeed when fee structure is correct; misconstructed or missing fees result in no registration for anyone
 
 ----
 

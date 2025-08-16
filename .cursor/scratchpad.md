@@ -2298,3 +2298,148 @@ The linting cleanup is complete and CI workflow is fully restored with strict en
 ### Next step
 - Implement `server/src/services/registration/parser/lastTransfer.ts` per spec to turn tests GREEN.
 
+
+## Planner Update — 2025-08-15: Marketplace PSBT (SIGHASH_SINGLE, buyer unknown)
+
+### Context
+- Goal: Support marketplaces where a seller lists via PSBT using SIGHASH_SINGLE (often ANYONECANPAY) without knowing the buyer upfront. The marketplace reveals PSBT details to a buyer, who completes and broadcasts. Re-contacting the seller to re-sign is not an option.
+- Constraints: Prefer on-chain enforcement; ordinals are sandboxed (no trusted server-side state inside inscription). Align with security.md mitigations (A4, A5, A7–A10, A12).
+
+### Key Challenges and Analysis
+- Unknown buyer: Phase 3 tuple `T = (parent_digest, sale_amount_sats, buyer_pubkey, sale_nonce)` cannot be fully formed at listing time if `buyer_pubkey` is unknown.
+- Two-tx flow: Ordinal transfer (sale tx) and creator fee (fee tx) may be separate; need linkage without buyer key known.
+- Mempool sniping: PSBT listings are inherently open to “first finisher wins.” Need to minimize front-running and ensure the intended buyer can complete without third-party stealing the marker spend.
+- Script limitations: No generic covenants; cannot require arbitrary conditions on the spending transaction beyond keys, delays, and simple hash preimage checks.
+
+### Proposed Approaches
+
+1) Any-buyer binding (purely on-chain, no marketplace key)
+- Listing sale tuple: `T_any = (parent_digest, sale_amount_sats, sale_nonce)` (no buyer field). Sale tx includes OP_RETURN(T_any) and creates a 1-sat marker output (unencumbered except standard spend).
+- Buyer completes sale PSBT (SIGHASH_SINGLE/ANYONECANPAY), then broadcasts a separate fee tx paying creator ≥ `feePolicy(sale_amount_sats)` and spending the marker.
+- Registration: Parser verifies sale OP_RETURN(T_any), fee spends that marker, and fee ≥ policy. Window checks `(H_child - fee.height) ≤ K` still apply.
+- Pros: No re-sign by seller; fully on-chain; simple.
+- Cons: Does not prevent mempool sniping; anyone can fill the listing; acceptable only if “first valid buyer wins” is a product feature, not a bug.
+
+2) Marketplace-gated marker (RECOMMENDED)
+- Listing sale tuple: `T_mkt = (parent_digest, sale_amount_sats, sale_nonce, marketplace_pubkey)`.
+- Sale tx:
+  - Includes OP_RETURN(T_mkt).
+  - Creates a 1-sat marker as P2TR key-path to `marketplace_pubkey` (or tapscript leaf requiring `marketplace_pubkey` signature). Seller signs with SIGHASH_SINGLE covering only their ordinal input and their matched payout output; buyer output remains free for completion.
+  - Seller payouts derived via pay-to-contract from T_mkt (bind price to outputs).
+- Fee tx: Must spend that marker. Marketplace co-signs the fee input (key-path spend). Buyer adds funding inputs and pays creator ≥ `feePolicy(sale_amount_sats)`.
+- Registration: Parser checks sale OP_RETURN(T_mkt), confirms fee spends exact marker outpoint from the sale, and enforces fee policy + window K.
+- Pros: Prevents mempool sniping of the marker spend; no seller re-sign; fully enforced on-chain by the marker’s key requirement; aligns with A5 mitigation (gates the marker).
+- Cons: Marketplace becomes a required co-signer for fee spends (operational responsibility); add fallback for liveness.
+- Fallback (liveness): Optional second tapscript leaf with CLTV timeout allowing seller reclaim after height H if sale stalls (does not affect normal registration path).
+
+2b) Anti-sniping enhancement: marketplace co-sign on sale input
+- Require the seller’s ordinal input to be spendable only with a marketplace signature (Taproot tapscript 2-of-2 seller+marketplace or MuSig2 aggregate key). Seller provides their signature at listing; marketplace withholds its signature until it pairs the sale with a valid fee PSBT and buyer.
+- Effect: Sale tx cannot be broadcast by snipers; marketplace controls release, then broadcasts sale+fee as a package (CPFP/RBF as needed). No seller re-contact required.
+- Parser impact: None (on-chain spend rule). Operational impact: marketplace must sign both sale input and fee marker spend.
+
+3) Hash-locked buyer commitment (ticket pool) — NOT RECOMMENDED
+- Commit `h = H(pubkey || nonce)` in sale; marker tapscript requires revealing `(pubkey, nonce)` and a signature by `pubkey` to spend. Marketplace pre-computes ticket pool and hands one to the buyer.
+- Downsides: Marketplace must generate/assign buyer keys; complicates wallets; adds key management burden without better security than (2).
+
+### Recommendation
+- Implement (2) Marketplace-gated marker as the default PSBT listing variant for unknown buyers.
+- Keep (1) Any-buyer binding as a documented alternative when “first come, first served” is acceptable. Clearly document sniping implications.
+
+### High-level Task Breakdown (PSBT listing variant)
+
+1. Spec and docs
+- Update Phase 3 doc: add `T_mkt` variant and flow diagrams for sale→fee linkage without `buyer_pubkey`.
+- Update security.md A5: document marketplace-gated marker variant as sniping mitigation for unknown-buyer listings.
+- Success: Docs merged; references from Phase 3/4 and security.md consistent.
+
+2. Parser support
+- Extend `verifyPayment` to accept `T_mkt` path: verify sale OP_RETURN fields, confirm fee spends the sale’s marker outpoint, and enforce fee policy/window.
+- Add detection logic: marker outpoint key matches `marketplace_pubkey` P2TR (derive from sale output script); do not require buyer key.
+- Success: New unit tests pass for `T_mkt` (valid/invalid marker link, wrong market key, insufficient fee, window violations).
+
+3. Test vectors
+- Create synthetic fixtures: sale tx with ordinal input/payout output (SIGHASH_SINGLE), marker to marketplace key, various fee tx cases.
+- Success: Server tests cover positive and negative paths; coverage ≥ 80% for new code.
+
+4. SDK/CLI updates
+- SDK: Add helper `buildPsbtListingUnknownBuyer({ parentId, saleAmount, marketplacePubkey, saleNonce })` and `finalizeFeeTxWithMarketplaceMarker({ saleTxid, marketplaceKey, creatorAddr, policy })`.
+- CLI: Examples/workflows for marketplaces; guidance on private PSBT reveal and short K window.
+- Success: Example flow executes on regtest end-to-end.
+
+5. Operational playbooks
+- Marketplace signing: HSM or hot key policy for marker spends; rate limits and audit logs.
+- Liveness fallback: Optional CLTV reclaim leaf parameters (documented, off the registration path).
+- Mempool strategy: CPFP packaging for fee tx, short expiry windows, private PSBT reveal, RBF awareness.
+- Success: Runbook documented; incident examples covered.
+
+### Success Criteria
+- A buyer-unknown listing can close without re-contacting the seller.
+- No third party can spend the sale’s marker without marketplace signature (sniping blocked at marker).
+- Parser correctly validates `T_mkt` listings; existing `T` (buyer-known) path remains unchanged.
+- Creator fee policy and window K enforced as before; provenance gating unaffected.
+
+### Open Questions / Decisions Needed
+- Do we require marketplace key-path only on marker, or include a CLTV fallback leaf for seller reclaim after timeout? Proposed: include fallback.
+- Do we also require fee tx to include a buyer-signed input (policy signal) for attribution? Optional.
+- What default K (window) to recommend for PSBT listings to balance UX vs. race surface? Proposed: K = 1.
+
+### Planner Deep Dive — Option 2b (Marketplace co-sign on sale input)
+
+Assurance model
+- Not a new SIGHASH mode. Co-sign is enforced by Taproot script (2-of-2) or MuSig2 aggregated key on the sale input.
+
+Mechanics (preferred: tapscript 2-of-2)
+- Listing vault: ordinal sits in a Taproot output whose script tree includes a 2-of-2 leaf requiring `seller_pub` and `marketplace_pub` (via OP_CHECKSIG/OP_CHECKSIGADD). Optional CLTV leaf for seller reclaim after timeout.
+- Pre-move: seller first moves the ordinal into this listing vault output (one on-chain tx).
+- Sale PSBT: uses that input; outputs include (a) seller payout (index == input index for SIGHASH_SINGLE), (b) marker to `marketplace_pub`, (c) buyer output(s) left unspecified for later.
+- Signatures: seller signs input with SIGHASH_SINGLE|ANYONECANPAY; marketplace later co-signs the same input (may use SINGLE or ALL). Without both, sale cannot be broadcast.
+- Fee tx: spends the marker (marketplace signature required) and pays creator ≥ policy.
+
+Alternative (advanced): MuSig2 key-path
+- Listing vault internal key is an aggregate of seller+marketplace. Requires off-chain nonce/session handling. Tooling less common; still requires pre-move.
+
+UX impact (seller)
+- One-time pre-move to listing vault; then regular “sign to list” using SIGHASH_SINGLE|ANYONECANPAY. No re-sign later.
+
+Marketplace implementation
+- Generate/publish `marketplace_pub`.
+- Provide vault address derivation helper for sellers.
+- Sign tapscript spend for sale input and marker spend in fee tx; orchestrate CPFP and private PSBT reveal; manage timeouts/reclaims.
+
+Tradeoffs
+- Strong anti-sniping and release control vs. extra pre-move and signing workload for marketplace. Keep Option 2 (marker-gated) as baseline; offer 2b as premium anti-sniping mode.
+
+### Planner Deep Dive — Option 2a (Marketplace‑gated marker, no sale co‑sign)
+
+Mechanics
+- Tuple: `T_mkt = (parent_digest, sale_amount_sats, sale_nonce, marketplace_pubkey)`.
+- Sale PSBT (seller signs once):
+  - Input: seller’s ordinal UTXO.
+  - Outputs (template):
+    - Seller payouts derived via pay‑to‑contract from `T_mkt` (enforces price when buyer funds are added).
+    - 1‑sat marker: P2TR locked to `marketplace_pubkey` (key‑path or tapscript), no buyer key required.
+    - Buyer outputs/funding: left to the buyer/marketplace to add before finalization.
+  - Seller signs input with `SIGHASH_SINGLE|ANYONECANPAY`. No pre‑move/vault required.
+- Fee tx (marketplace controls): spends the marker (marketplace signature required) and pays creator ≥ `feePolicy(sale_amount_sats)`; packaged via CPFP.
+- Registration: parser verifies sale OP_RETURN(T_mkt), fee spends that sale’s marker, fee policy and K‑window; provenance gating unchanged.
+
+Seller UX
+- Single PSBT sign, same as a typical SIGHASH_SINGLE listing; no re‑contact later; no pre‑move.
+
+Marketplace implementation
+- Publish `marketplace_pubkey`; provide PSBT template helper that encodes OP_RETURN(T_mkt), marker output, and pay‑to‑contract seller payouts.
+- Keep listing PSBT private; reveal only to intended buyer; finalize with buyer funding; broadcast sale + fee package; sign fee marker spend.
+- Operate CPFP, short K window, and private relay where possible.
+
+Mempool sniping analysis
+- Marker spend sniping: blocked. Only marketplace can spend the marker, so third parties cannot complete registration.
+- Sale completion sniping: not cryptographically blocked. Any party with the listing PSBT can add funds and broadcast the sale to themselves (seller still gets paid). Mitigations:
+  - Private PSBT reveal (encrypted channels, short TTL links); watermark PSBTs for traceability.
+  - Broadcast as a package (sale + fee) to miners/peers; use CPFP to secure fast inclusion.
+  - Short K window to limit racer’s useful time; RBF strategy under marketplace control.
+  - Business policy: marketplace only signs fee (registration) for the intended buyer, reducing incentive to snipe.
+- Hard stop: preventing sale sniping entirely requires sale input co‑sign (Option 2b) or off‑chain gating; 2a cannot enforce that on‑chain.
+
+Tradeoffs
+- 2a offers low seller friction and strong control over registration, but accepts “first to fund wins” for the sale leg. Use 2b where sale sniping must be impossible.
+

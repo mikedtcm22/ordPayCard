@@ -34,6 +34,12 @@ Purpose: Reduce integration time for marketplaces and creators. Deliver SDK, sta
       - Buyer BIP-322 signature validity; expiry window using `/r/blockheight`
      - Parent inscription auto-bricks unless a provenance child receipt passes all checks and `H_child == H_parent` with fee window satisfied
 
+    - Modes: Marketplace vs Private (explicit tuples)
+      - Marketplace mode (Option 2a): sale OP_RETURN includes `marketplace_pubkey` instead of `buyer_pubkey`; sale creates a 1-sat marker locked to `marketplace_pubkey`. At finalize, marketplace binds the intended `buyer_pubkey` in the fee tx (OP_RETURN recommit) and authorizes the fee by spending the marker. Parser requires fee to spend the sale’s marker and to recommit `buyer_pubkey`.
+      - Private two-tx mode: sale OP_RETURN includes `buyer_pubkey`; sale creates a buyer-locked marker. Fee is spent by the buyer and recommits the tuple with `buyer_pubkey` and `expiry_block`. Parser requires marker linkage and fee policy.
+      - Private single-tx mode (optional): sale tx pays creator ≥ policy and commits tuple with `buyer_pubkey`; no separate fee tx required. Parser accepts creator sum in sale tx.
+      - SIGHASH guidance: do not gate validation on SIGHASH. Prefer SIGHASH_ALL for private sales; marketplace listings typically use SIGHASH_SINGLE|ANYONECANPAY.
+
     - Split-wallet compatibility (e.g., Xverse payments vs ordinals wallets):
        - PSBT flow: payments wallet adds/Signs funding inputs and creator output; ordinals wallet signs only the buyer-locked marker input; finalize and broadcast. No buyer funds required.
        - Provenance integration: child reveal spends the parent in the same flow or immediately after (two-tx mode), ensuring `H_child == H_parent`. SDK provides single-reveal builder when supported, and two-tx fallback with fee window (K).
@@ -94,8 +100,10 @@ Purpose: Reduce integration time for marketplaces and creators. Deliver SDK, sta
   - [ ] Rate limiting and simple auth (API key for partner usage)
 
   - CLI & templates
-  - [ ] PSBT generator for seller sale tx (OP_RETURN, marker UTXO, pay-to-contract payouts)
-  - [ ] PSBT generator for buyer fee tx (spend marker, pay creator, optional fee OP_RETURN)
+  - [ ] PSBT generator for seller sale tx (OP_RETURN, marker UTXO, pay-to-contract payouts) with modes: private (buyer_pubkey) and marketplace (marketplace_pubkey)
+  - [ ] PSBT generator for buyer/marketplace fee tx
+    - Private mode: buyer spends marker; pays creator; adds fee OP_RETURN recommit
+    - Marketplace mode: marketplace spends or co-signs marker; binds buyer in OP_RETURN recommit
    - [ ] Canonical receipt JSON (provenance) generator + optional BIP-322 signer for attribution
    - [ ] Provenance helpers: build reveal PSBT that spends parent and inscribes JSON; single-reveal (fee+receipt in one) and two-tx (fee then reveal) modes
   - [ ] Plop or custom generator for NFT + registration JSON skeletons
@@ -114,9 +122,9 @@ Purpose: Reduce integration time for marketplaces and creators. Deliver SDK, sta
   - [ ] `TraitPreview` and `BGFGPreview` components to validate shared assets
 
   - Testing
-   - [ ] E2E: generate sale+fee PSBTs, inscribe provenance receipt (spend parent), parser auto-bricks/activates correctly on regtest without any server or index attestation
+   - [ ] E2E: generate sale+fee PSBTs (private and marketplace modes), inscribe provenance receipt (spend parent), parser auto-bricks/activates correctly on regtest without any server or index attestation
    - [ ] E2E (two-tx window): fee first then reveal; accept if `fee.height ≤ H_child` and `(H_child - fee.height) ≤ K`
-  - [ ] Split-wallet E2E: payments wallet funds fee tx while ordinals wallet signs marker input; racer attempts cannot consume marker
+  - [ ] Split-wallet E2E: payments wallet funds fee tx while ordinals wallet signs marker input; racer attempts cannot consume marker (private mode). Marketplace-gated marker prevents third-party fee spends (marketplace mode)
   - [ ] Unit tests for SDK and API
   - [ ] (Moved from Phase 2) Client/server parity tests for BIP-322 verification
   - [ ] E2E on regtest that simulates full registration
