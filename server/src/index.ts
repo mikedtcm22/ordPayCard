@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, RequestHandler } from 'express';
 import cors from 'cors';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const helmet = require('helmet');
@@ -57,14 +57,14 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }) as any);
-app.use(express.urlencoded({ extended: true }) as any);
+app.use(express.json({ limit: '10mb' }) as RequestHandler);
+app.use(express.urlencoded({ extended: true }) as RequestHandler);
 
 // HTTP logger (after body parsing)
 app.use(pinoHttp({ 
   logger, 
-  customProps: (req: any) => ({ requestId: req.id })
-}) as any);
+  customProps: (req: Request) => ({ requestId: (req as Request & { id?: string }).id })
+}));
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {

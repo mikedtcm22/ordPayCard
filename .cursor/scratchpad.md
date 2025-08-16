@@ -47,8 +47,8 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - ✅ B3: Developer debug flag
 
 #### **Track C: Backend Status API**
-- [ ] C1: Endpoint contract with provenance gating
-- [ ] C2: 30s cache freshness
+- ✅ C1: Endpoint contract with provenance gating
+- ✅ C2: 30s cache freshness
 
 #### **Track D: On-chain API Library (Embers Core v1)**
 - [ ] D1: Public API surface and types
@@ -65,8 +65,9 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - [x] **Phase 1 Complete**: Project foundation, Bitcoin integration, development environment
 - [x] **Track A Complete**: Server parser library with all utilities and tests
 - [x] **Track B Complete**: Template updates with parser integration, deduplication, and debug features
-- [ ] **In Progress**: C1 - Backend status API endpoint contract
-- [ ] **Pending**: C2, D1-D3, E1-E2
+- [x] **Track C Complete**: Backend status API with endpoint contract and 30s cache freshness
+- [ ] **In Progress**: D1 - On-chain API library public surface
+- [ ] **Pending**: D2-D3, E1-E2
 
 ### TDD Progress Summary
 **Completed (GREEN)**:
@@ -79,12 +80,14 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - B1: Template integration with `EmbersCore.verifyPayment` mock
 - B2: Template feeTxid deduplication with `EmbersCore.dedupe` integration
 - B3: Developer debug flag with PII-safe diagnostic information
+- C1: Backend status API endpoint contract with provenance gating and debug info
+- C2: Cache freshness validation with 30s TTL and comprehensive test coverage
 
-**Current**: C1 - Backend status API endpoint contract
+**Current**: D1 - On-chain API library public surface definition
 
 ### Development Environment Status
 - **Node.js**: v22.17.1 (NVM managed)
-- **Testing**: 166 total tests passing (server: 143, client: 23)
+- **Testing**: 182 total tests passing (server: 159, client: 23)
 - **CI/CD**: Fully operational with strict linting enforcement
 - **Docker**: Development and production configurations ready
 
@@ -110,14 +113,32 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 
 ## Executor's Feedback or Assistance Requests
 
-### Current Task: C1 - Backend Status API Endpoint Contract
+### Completed Task: C1 - Backend Status API Endpoint Contract
 
-**Objective**: Implement status endpoint with provenance gating and debug info
+**Objective**: ✅ Implemented status endpoint with provenance gating and debug info
+
+**Achievements**:
+1. ✅ **RED**: Added comprehensive test suite for `GET /api/registration/:nftId` endpoint contract
+2. ✅ **GREEN**: Implemented route with parser integration, provenance window validation, 30s caching
+3. **REFACTOR**: Extract cache into utility, add metrics hooks (planning only)
+
+### Completed Task: C2 - Cache Freshness Implementation
+
+**Objective**: ✅ Verified 30s cache behavior with comprehensive test coverage
+
+**Achievements**:
+1. ✅ **RED**: Added cache behavior tests for TTL validation and timing verification
+2. ✅ **GREEN**: Confirmed existing cache implementation meets all requirements
+3. **REFACTOR**: Identified opportunities for centralized cache utility (planning only)
+
+### Next Task: D1 - On-chain API Library Public Surface
+
+**Objective**: Define and implement EmbersCore v1 public API surface with types
 
 **Next Steps**:
-1. **RED**: Add test for `GET /api/registration/:nftId` endpoint contract
-2. **GREEN**: Implement route + controller with provenance window integration
-3. **REFACTOR**: Extract cache into utility, add metrics hooks
+1. **RED**: Add tests for public API surface existence and correct types
+2. **GREEN**: Implement minimal index exporting server-parity functions with version metadata
+3. **REFACTOR**: Generate API docs from TSDoc and lock public API tests
 
 ### Key Implementation Notes
 - Template now calls `EmbersCore.verifyPayment` and displays results
@@ -126,6 +147,11 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - Vitest module alias resolution fixed to match Vite config
 - All server parser utilities have comprehensive test coverage
 - Cache implementations use 30s TTL with per-inscription isolation
+- Status API endpoint integrates all parser utilities for comprehensive validation
+- Provenance gating enforces H_child == H_parent constraint before fee validation
+- Response caching improves performance while maintaining data freshness
+- Jest hanging issue resolved with NODE_ENV=test isolation and forceExit configuration
+- TDD automation now runs smoothly without manual interruption or Ctrl+C requirement
 
 ## Lessons
 
@@ -139,6 +165,11 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - **Debug Implementation**: PII sanitization must apply recursively to inputs and outputs; JSON serialization requires BigInt conversion
 - **Deduplication Logic**: Order-preserving uniqueness with graceful fallback for missing utilities
 - **Async Testing**: Template functions triggered by events require explicit waiting for async completion in tests
+- **Jest Test Isolation**: Express server startup during tests causes hanging; NODE_ENV=test check prevents server startup in test mode
+- **TDD Automation**: forceExit and detectOpenHandles in Jest config eliminate manual intervention during test runs
+- **Cache Testing Strategy**: Observable behavior tests (timing, response identity) more reliable than fetch mocking for integration testing
+- **Cache Validation**: Existing implementation already met requirements; comprehensive tests confirmed TTL and isolation behavior
+- **Linter Automation**: ESLint config converted to .cjs format resolves ES module conflicts; all 'any' types replaced with 'unknown' for type safety
 
 ### Technical Decisions
 - **OP_RETURN Format**: `<nftId>|<expiryBlock>` canonical encoding
@@ -160,9 +191,25 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - **Security**: Debug object only created when `DEBUG=1` or `DEBUG=true`; explicitly removed when `DEBUG=false`
 - **Performance**: PII filtering has O(n) complexity per object; acceptable for debug-only usage
 
+### REFACTOR Notes for C1
+- **Cache Centralization**: Current in-route cache should be extracted to shared utility for reuse across endpoints
+- **Metrics Integration**: Add request timing, cache hit ratio, and parser utility performance metrics
+- **Error Handling**: Standardize error responses and add structured logging for debugging
+- **Configuration**: Environment variables for timeouts, cache TTL, and network endpoints should be centralized
+- **Network Abstraction**: ord endpoint calls should be abstracted into service layer for easier testing and mocking
+- **Response Optimization**: Consider partial response caching to reduce computation for frequently accessed debug fields
+
+### REFACTOR Notes for C2
+- **Centralized Cache Service**: Extract status cache into shared `CacheService` class with TTL management, LRU eviction, and metrics
+- **Test Strategy Evolution**: Observable behavior testing proved more reliable than network mocking; standardize this pattern for integration tests
+- **Cache Monitoring**: Add cache hit/miss ratio logging and performance metrics for production monitoring
+- **Cache Configuration**: Make TTL configurable per cache type (status: 30s, metadata: 5min, etc.) through environment variables
+- **Memory Management**: Consider implementing cache size limits and automatic cleanup for long-running processes
+- **Cache Warming**: Add optional cache pre-warming for frequently accessed NFT IDs to improve initial response times
+
 ## Next Steps
 
-1. **Backend API**: C1-C2 status endpoint with caching and provenance gating
+1. **Backend API**: Track C completed (C1-C2)
 2. **Embers Core**: D1-D3 on-chain library preparation
 3. **Documentation**: E1-E2 tooling and troubleshooting guides
 

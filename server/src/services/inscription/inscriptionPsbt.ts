@@ -58,7 +58,7 @@ interface CommitTxDetails {
   vout: number;
   value: number;
   scriptPubKey: Buffer;
-  tapLeafScript: any;
+  tapLeafScript: unknown;
   internalPubkey: Buffer;
 }
 
@@ -254,7 +254,7 @@ function createRevealPsbt(params: {
     },
     tapInternalKey: commitTxDetails.internalPubkey,
     tapLeafScript: [{
-      leafVersion: commitTxDetails.tapLeafScript.leafVersion,
+      leafVersion: (commitTxDetails.tapLeafScript as { leafVersion: number }).leafVersion,
       script: inscriptionScript,
       controlBlock: Buffer.alloc(33) // Placeholder - will be computed during signing
     }]

@@ -8,7 +8,7 @@ const router = Router();
 
 // Phase 2 enhanced validation cache for status endpoint
 const STATUS_CACHE_MS = 30_000; // 30 seconds
-type StatusCacheEntry = { data: any; expiresAtMs: number };
+type StatusCacheEntry = { data: unknown; expiresAtMs: number };
 const statusCache: Map<string, StatusCacheEntry> = new Map();
 
 // GET /api/registration/:nftId (Phase 2 Enhanced Validation)
@@ -32,9 +32,9 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
     }
 
     // Dependencies for parser utilities
-    async function fetchJson(url: string): Promise<any | null> {
+    async function fetchJson(url: string): Promise<unknown | null> {
       try {
-        const r = await fetch(url, { redirect: 'follow' as any });
+        const r = await fetch(url, { redirect: 'follow' as RequestRedirect });
         if (!r.ok) return null;
         const txt = await r.text();
         try { return JSON.parse(txt); } catch { return null; }
@@ -50,11 +50,13 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
       ];
       for (const url of variants) {
         const data = await fetchJson(url);
-        if (data && Array.isArray(data.children)) {
-          return data.children.map((c: any) => (c && typeof c === 'object' ? c : { id: c }));
+        if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).children)) {
+          const children = (data as Record<string, unknown>).children as unknown[];
+          return children.map((c: unknown) => (c && typeof c === 'object' ? c : { id: c }));
         }
-        if (data && Array.isArray(data.ids)) {
-          return data.ids.map((id: string) => ({ id }));
+        if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).ids)) {
+          const ids = (data as Record<string, unknown>).ids as string[];
+          return ids.map((id: string) => ({ id }));
         }
       }
       return [];
@@ -72,7 +74,7 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
 
     // Fetch children and validate registrations
     const children = await fetchChildren(nftId);
-    let lastRegistration: any = null;
+    let lastRegistration: unknown = null;
     let isRegistered = false;
     
     // Only proceed if provenance gating passes (H_child == H_parent)
@@ -130,7 +132,7 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
             }
             break; // Use first valid registration
           }
-        } catch (error) {
+        } catch {
           // Continue to next transaction on error
           continue;
         }
@@ -188,9 +190,9 @@ router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: 
     const creatorAddr = process.env['CREATOR_WALLET'] || '';
     const fixedFeeSats = parseInt(process.env['REGISTRATION_FEE_SATS'] || '50000', 10);
 
-    async function fetchJson(url: string): Promise<any | null> {
+    async function fetchJson(url: string): Promise<unknown | null> {
       try {
-        const r = await fetch(url, { redirect: 'follow' as any });
+        const r = await fetch(url, { redirect: 'follow' as RequestRedirect });
         if (!r.ok) return null;
         const txt = await r.text();
         try { return JSON.parse(txt); } catch { return null; }
@@ -205,23 +207,28 @@ router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: 
     let childIds: string[] = [];
     for (const u of variants) {
       const data = await fetchJson(u);
-      if (data && Array.isArray(data.children)) {
+      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).children)) {
         // Newer ord returns objects; older may return strings
-        childIds = data.children.map((c: any) => (c && typeof c === 'object' ? c.id : c)).filter(Boolean);
+        const children = (data as Record<string, unknown>).children as unknown[];
+        childIds = children.map((c: unknown) => (c && typeof c === 'object' ? (c as Record<string, unknown>).id as string : c as string)).filter(Boolean);
         break;
       }
-      if (data && Array.isArray(data.ids)) { childIds = data.ids; break; }
+      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).ids)) { 
+        childIds = (data as Record<string, unknown>).ids as string[]; 
+        break; 
+      }
     }
 
-    let lastRegistration: any = null;
+    let lastRegistration: unknown = null;
     for (const cid of childIds) {
       const reg = await fetchJson(`http://localhost:8080/content/${cid}`);
       if (!reg || typeof reg !== 'object') continue;
-      if (reg.schema !== 'buyer_registration.v1') continue;
-      if (reg.parent !== inscriptionId) continue;
-      if (creatorAddr && reg.paid_to && reg.paid_to !== creatorAddr) continue;
-      if (typeof reg.fee_sats === 'number' && reg.fee_sats < fixedFeeSats) continue;
-      lastRegistration = { ...reg, childId: cid };
+      const regObj = reg as Record<string, unknown>;
+      if (regObj.schema !== 'buyer_registration.v1') continue;
+      if (regObj.parent !== inscriptionId) continue;
+      if (creatorAddr && regObj.paid_to && regObj.paid_to !== creatorAddr) continue;
+      if (typeof regObj.fee_sats === 'number' && regObj.fee_sats < fixedFeeSats) continue;
+      lastRegistration = { ...regObj, childId: cid };
     }
 
     const isRegistered = !!lastRegistration;

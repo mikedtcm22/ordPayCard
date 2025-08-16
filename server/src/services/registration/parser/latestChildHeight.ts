@@ -1,5 +1,5 @@
 export interface LatestChildDeps {
-  fetchChildren: (inscriptionId: string) => Promise<any[]>;
+  fetchChildren: (inscriptionId: string) => Promise<unknown[]>;
   nowMs?: () => number;
 }
 
@@ -34,7 +34,8 @@ export async function getLatestChildHeight(
     }
     let maxHeight: number | null = null;
     for (const c of children) {
-      const h = typeof c?.height === 'number' ? c.height : typeof c?.genesis_height === 'number' ? c.genesis_height : null;
+      const child = c as Record<string, unknown>;
+      const h = typeof child?.['height'] === 'number' ? child['height'] : typeof child?.['genesis_height'] === 'number' ? child['genesis_height'] : null;
       if (typeof h === 'number' && (maxHeight === null || h > maxHeight)) maxHeight = h;
     }
     const entry = { height: maxHeight, expiresAtMs: now + THIRTY_SECONDS_MS };

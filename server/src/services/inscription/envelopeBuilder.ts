@@ -15,7 +15,7 @@ import { getNetwork } from '../bitcoin';
 export interface InscriptionData {
   contentType: string;
   content: Buffer;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -94,7 +94,7 @@ export function buildInscriptionScript(data: InscriptionData): Buffer {
 export function createInscriptionOutput(
   inscriptionScript: Buffer,
   internalPubkey: Buffer
-): { output: Buffer; address: string; tapLeafScript: any } {
+): { output: Buffer; address: string; tapLeafScript: unknown } {
   const network = getNetwork();
   
   // Remove prefix byte if present (convert from 33 to 32 bytes)
@@ -235,7 +235,7 @@ export function validateInscriptionContent(
  */
 export function createHtmlInscriptionData(
   htmlContent: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): InscriptionData {
   const data: InscriptionData = {
     contentType: 'text/html;charset=utf-8',

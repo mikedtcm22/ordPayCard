@@ -1,7 +1,7 @@
 /** Shared types for registration parser utilities */
 
-export type FetchMeta = (inscriptionId: string) => Promise<any>;
-export type FetchTx = (txid: string) => Promise<any>;
+export type FetchMeta = (inscriptionId: string) => Promise<unknown>;
+export type FetchTx = (txid: string) => Promise<unknown>;
 
 export interface LastTransferDeps {
   fetchMeta: FetchMeta;

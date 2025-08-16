@@ -40,10 +40,10 @@ function extractTxidFromSatpointString(satpointOrLocation: unknown): string | nu
  */
 function extractTxidFromMeta(meta: unknown): string | null {
   if (!meta || typeof meta !== 'object') return null;
-  const m: any = meta as any;
+  const m = meta as Record<string, unknown>;
   return (
-    extractTxidFromSatpointString(m.satpoint) ??
-    extractTxidFromSatpointString(m.location) ??
+    extractTxidFromSatpointString(m['satpoint']) ??
+    extractTxidFromSatpointString(m['location']) ??
     null
   );
 }
@@ -52,13 +52,15 @@ function extractTxidFromMeta(meta: unknown): string | null {
  * Determine a transaction's block height if confirmed; otherwise null.
  * Accepts objects that may look like esplora responses.
  */
-function deriveConfirmedBlockHeight(txLike: any): number | null {
+function deriveConfirmedBlockHeight(txLike: unknown): number | null {
   if (!txLike || typeof txLike !== 'object') return null;
+  const tx = txLike as Record<string, unknown>;
+  
   // If an explicit confirmation flag is provided and false, treat as unconfirmed.
-  const status = txLike.status;
-  if (status && typeof status === 'object' && status.confirmed === false) return null;
+  const status = tx['status'];
+  if (status && typeof status === 'object' && (status as Record<string, unknown>)['confirmed'] === false) return null;
 
-  const height = txLike.block_height;
+  const height = tx['block_height'];
   if (typeof height === 'number' && height > 0) return height;
   return null;
 }
