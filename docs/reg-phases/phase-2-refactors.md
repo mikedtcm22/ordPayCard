@@ -2,7 +2,7 @@
 
 This document consolidates refactoring items identified during Phase 2 implementation (Tracks A–C) and organizes them into small, verifiable tasks with clear success criteria. All work should occur on branch `pre_core_refactors`.
 
-**Progress**: 3/4 themes completed ✅ (B2 ✅, B3 ✅, C1 ✅, C2 pending)
+**Progress**: 4/4 themes completed ✅ (B2 ✅, B3 ✅, C1 ✅, C2 ✅)
 
 #### Scope
 - Focus: Hardening, structure, and consistency improvements discovered after completing Tracks A (Parser), B (Template), and C (Backend Status API).
@@ -52,16 +52,16 @@ This document consolidates refactoring items identified during Phase 2 implement
   - ✅ Route imports cache, config, metrics, and service abstractions instead of inlining.
   - ✅ Existing endpoint contract and cache behavior remain unchanged (all tests pass).
 
-#### C2 — Centralized Cache Service
+#### C2 — Centralized Cache Service ✅
 - Problem: Cache is local to the status route; needs a reusable, observable implementation.
 - Tasks:
-  - [ ] Implement a `CacheService` with TTL, basic LRU, and metrics counters.
-  - [ ] Make TTL configurable per cache type (status, metadata, etc.).
-  - [ ] Add observable behavior tests validating TTL expiry and isolation.
+  - [x] Implement a `CacheService` with TTL, basic LRU, and metrics counters.
+  - [x] Make TTL configurable per cache type (status, metadata, etc.).
+  - [x] Add observable behavior tests validating TTL expiry and isolation.
   - [ ] Provide optional cache warming hooks for frequently accessed IDs (deferred if out of scope).
 - Success criteria:
-  - Existing status cache tests pass using the new service.
-  - Additional tests cover multiple TTLs and isolation between keys.
+  - ✅ Existing status cache tests pass using the new service.
+  - ✅ Additional tests cover multiple TTLs and isolation between keys.
 
 ---
 
