@@ -8,6 +8,7 @@ import { SimpleCache } from '../utils/cache';
 import { ApiError, ErrorCodes, asyncHandler } from '../middleware/errorHandler';
 import * as defaultMetrics from '../utils/metrics';
 import { getConfig } from '../config';
+import { OrdinalsService } from '../services/ordinals.service';
 
 // Metrics functions interface for dependency injection
 export interface MetricsFunctions {
@@ -16,10 +17,18 @@ export interface MetricsFunctions {
   triggerHook: (event: string, data: any) => void;
 }
 
+// Optional service injection for testing
+export interface ServiceDependencies {
+  ordinalsService?: OrdinalsService;
+}
+
 /**
- * Create registration router with optional metrics injection
+ * Create registration router with optional metrics and service injection
  */
-export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
+export function createRegistrationRouter(
+  metrics?: MetricsFunctions,
+  services?: ServiceDependencies
+): Router {
   const router = Router();
   
   // Use injected metrics or default singleton
@@ -27,6 +36,9 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
 
   // Get configuration
   const config = getConfig();
+  
+  // Initialize services
+  const ordinalsService = services?.ordinalsService || new OrdinalsService(config);
 
   // Phase 2 enhanced validation cache for status endpoint
   const statusCache = new SimpleCache<unknown>({ ttlMs: config.cache.status.ttl });
@@ -80,51 +92,9 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
     recordCacheOperation(false, nftId);
 
     // Dependencies for parser utilities
-    async function fetchJson(url: string): Promise<unknown | null> {
-      try {
-        const r = await fetch(url, { redirect: 'follow' });
-        if (!r.ok) {
-          if (r.status >= 500) {
-            throw new ApiError(502, ErrorCodes.UPSTREAM_ERROR, 'Upstream service error', { upstreamStatus: r.status });
-          }
-          return null;
-        }
-        const txt = await r.text();
-        try { 
-          return JSON.parse(txt);
-        } catch {
-          throw new ApiError(502, ErrorCodes.DATA_PARSING_ERROR, 'Failed to parse upstream response');
-        }
-      } catch (err) {
-        if (err instanceof ApiError) throw err;
-        if (err instanceof Error && (err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED'))) {
-          throw new ApiError(503, ErrorCodes.SERVICE_UNAVAILABLE, 'Unable to fetch registration data', { reason: 'Network timeout or service unavailable' });
-        }
-        // Re-throw unexpected errors to be caught by error handler
-        throw err;
-      }
-    }
-
-    const fetchMeta = async (id: string) => fetchJson(`${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.metadataPath}${id}`);
-    const fetchTx = async (txid: string) => fetchJson(`${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.txPath}${txid}`);
-    const fetchChildren = async (id: string) => {
-      const variants = [
-        `${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.childrenPath}${id}/inscriptions`,
-        `${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.childrenPath}${id}`,
-      ];
-      for (const url of variants) {
-        const data = await fetchJson(url);
-        if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['children'])) {
-          const children = (data as Record<string, unknown>)['children'] as unknown[];
-          return children.map((c: unknown) => (c && typeof c === 'object' ? c : { id: c }));
-        }
-        if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['ids'])) {
-          const ids = (data as Record<string, unknown>)['ids'] as string[];
-          return ids.map((id: string) => ({ id }));
-        }
-      }
-      return [];
-    };
+    const fetchMeta = async (id: string) => ordinalsService.fetchMetadata(id);
+    const fetchTx = async (txid: string) => ordinalsService.fetchTransaction(txid);
+    const fetchChildren = async (id: string) => ordinalsService.fetchChildren(id);
 
     // Derive heights for provenance gating
     const H_parent = await getLastTransferHeight(nftId, { fetchMeta, fetchTx });
@@ -150,7 +120,7 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
         const childObj = child as Record<string, unknown>;
         if (!childObj['id']) continue;
         
-        const reg = await fetchJson(`${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.contentPath}${childObj['id']}`);
+        const reg = await ordinalsService.fetchContent(childObj['id'] as string);
         if (!reg || typeof reg !== 'object') continue;
         const regObj = reg as Record<string, unknown>;
         if (regObj['schema'] !== 'buyer_registration.v1') continue;
@@ -195,7 +165,7 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
               if (!child || typeof child !== 'object') continue;
               const childObj = child as Record<string, unknown>;
               if (!childObj['id']) continue;
-              const reg = await fetchJson(`${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.contentPath}${childObj['id']}`);
+              const reg = await ordinalsService.fetchContent(childObj['id'] as string);
               if (reg && typeof reg === 'object' && (reg as Record<string, unknown>)['feeTxid'] === feeTxid) {
                 const rawReg = { ...reg, childId: childObj['id'], verifiedAmount: verifiedAmount.toString() };
                 lastRegistration = normalizeRegistration(rawReg);
@@ -288,54 +258,13 @@ export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
     const creatorAddr = config.registration.fees.creatorWallet;
     const fixedFeeSats = config.registration.fees.registrationSats;
 
-    async function fetchJson(url: string): Promise<unknown | null> {
-      try {
-        const r = await fetch(url, { redirect: 'follow' });
-        if (!r.ok) {
-          if (r.status >= 500) {
-            throw new ApiError(502, ErrorCodes.UPSTREAM_ERROR, 'Upstream service error', { upstreamStatus: r.status });
-          }
-          return null;
-        }
-        const txt = await r.text();
-        try { 
-          return JSON.parse(txt);
-        } catch {
-          throw new ApiError(502, ErrorCodes.DATA_PARSING_ERROR, 'Failed to parse upstream response');
-        }
-      } catch (err) {
-        if (err instanceof ApiError) throw err;
-        if (err instanceof Error && (err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED'))) {
-          throw new ApiError(503, ErrorCodes.SERVICE_UNAVAILABLE, 'Unable to fetch registration data', { reason: 'Network timeout or service unavailable' });
-        }
-        // Re-throw unexpected errors to be caught by error handler
-        throw err;
-      }
-    }
-
-    // Try both ord endpoint variants to list children
-    const variants = [
-      `${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.childrenPath}${inscriptionId}/inscriptions`,
-      `${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.childrenPath}${inscriptionId}`,
-    ];
-    let childIds: string[] = [];
-    for (const u of variants) {
-      const data = await fetchJson(u);
-      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['children'])) {
-        // Newer ord returns objects; older may return strings
-        const children = (data as Record<string, unknown>)['children'] as unknown[];
-        childIds = children.map((c: unknown) => (c && typeof c === 'object' ? (c as Record<string, unknown>)['id'] as string : c as string)).filter(Boolean);
-        break;
-      }
-      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['ids'])) { 
-        childIds = (data as Record<string, unknown>)['ids'] as string[]; 
-        break; 
-      }
-    }
+    // Fetch children using service layer
+    const children = await ordinalsService.fetchChildren(inscriptionId);
+    const childIds = children.map(c => c.id);
 
     let lastRegistration: unknown = null;
     for (const cid of childIds) {
-      const reg = await fetchJson(`${config.registration.endpoints.ordinalsApi}${config.registration.endpoints.contentPath}${cid}`);
+      const reg = await ordinalsService.fetchContent(cid);
       if (!reg || typeof reg !== 'object') continue;
       const regObj = reg as Record<string, unknown>;
       if (regObj['schema'] !== 'buyer_registration.v1') continue;
