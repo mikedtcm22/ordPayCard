@@ -107,11 +107,13 @@ app.use('*', (req: Request, res: Response) => {
 // Centralized error handling middleware
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
-  logger.info(`🚀 Server running on port ${PORT}`);
-  logger.info(`📊 Health check available at http://localhost:${PORT}/health`);
-  logger.info(`🔗 API available at http://localhost:${PORT}/api`);
-});
+// Start server only when not in test environment
+if (process.env['NODE_ENV'] !== 'test') {
+  app.listen(PORT, () => {
+    logger.info(`🚀 Server running on port ${PORT}`);
+    logger.info(`📊 Health check available at http://localhost:${PORT}/health`);
+    logger.info(`🔗 API available at http://localhost:${PORT}/api`);
+  });
+}
 
 export default app;
