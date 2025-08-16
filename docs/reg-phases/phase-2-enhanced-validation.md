@@ -116,16 +116,25 @@ Conventions
 - Coverage target: ≥ 80% lines/branches in new modules; enforce per package.
 - Default network for Phase 2 tests: regtest.
 
-Progress notes (2025-08-14)
-- A0–A4 partially executed and currently GREEN in the codebase; future re-runs should start from this green baseline and can refactor/extend without changing behavior.
+Progress notes (Updated 2025-08-16)
+- **Track A (Parser Library) - COMPLETED**: All server-side parser utilities implemented and GREEN
   - A0 implemented utilities:
     - `getLastTransferHeight` (server): `server/src/services/registration/parser/lastTransfer.ts`, tests: `__tests__/lastTransfer.test.ts`
     - `getLatestChildHeight` (server): `server/src/services/registration/parser/latestChildHeight.ts`, tests: `__tests__/latestChildHeight.test.ts`
   - A1 OP_RETURN parsing: `server/src/services/registration/parser/opReturn.ts`, tests: `__tests__/opReturnExtractor.test.ts`
   - A2 sum-to-creator: `server/src/services/registration/parser/sumToCreator.ts`, tests: `__tests__/sumToCreator.test.ts`
-  - A3 verifyPayment orchestration (window checks passed in via options for now): `server/src/services/registration/parser/verifyPayment.ts`, tests: `__tests__/verifyPayment.test.ts`
+  - A3 verifyPayment orchestration: `server/src/services/registration/parser/verifyPayment.ts`, tests: `__tests__/verifyPayment.test.ts`
   - A4 dedupe: `server/src/services/registration/parser/dedupe.ts`, tests: `__tests__/dedupe.test.ts`
+  - A6 defensive parsing: implemented with ParserError types and timeouts
   - Jest setup centralized ECC init for P2TR tests: `server/jest.setup.ts`
+
+- **Track B (NFT Template Updates) - COMPLETED**: All template functionality implemented and GREEN
+  - B1 parser-verified flow: `client/src/templates/inscription/registrationWrapper.html` with `EmbersCore.verifyPayment` integration
+  - B2 feeTxid deduplication: template uses `EmbersCore.dedupe` for order-preserving uniqueness
+  - B3 developer debug flag: `window.__debug` with PII-safe diagnostic information
+  - Tests: `client/src/templates/inscription/__tests__/registrationWrapper.test.ts` (8 comprehensive test cases)
+
+- **Current Status**: 166 total tests passing (server: 143, client: 23)
 
 Track A — Parser Library v1.0 (server-first parity, then client bundle)
 Micro-task A0 (updated): Parent/child heights derivation (server utilities)
@@ -203,42 +212,46 @@ Parity tasks (client)
   - RED: duplicate test names and cases; GREEN: minimal port; ensure deterministic results.
   - Add RED/GREEN for provenance gating helper (compute `H_child` from children; `H_parent` from satpoint) when recursion endpoints are available.
 
-Track B — NFT Template updates (registration wrapper flows)
+Track B — NFT Template updates (registration wrapper flows) ✅ COMPLETED
 Files: `client/src/templates/inscription/registrationWrapper.html` + test harness
 
-Micro-task B1: Parser-verified flow returns 0 sats on OP_RETURN missing/mismatch/expired
-- RED
+Micro-task B1: Parser-verified flow returns 0 sats on OP_RETURN missing/mismatch/expired ✅ COMPLETED
+- RED ✅
   - `client/src/templates/inscription/__tests__/registrationWrapper.test.ts`
   - Simulate calling `EmbersCore.verifyPayment` via injected mock; assert UI displays 0 sats and "Not Registered".
-- GREEN
+- GREEN ✅
   - Wire wrapper to call `EmbersCore.verifyPayment`; render result; guard against undefined. When recursion endpoints exist, surface provenance gating (require `H_child == H_parent` and fee window).
-- REFACTOR (planning)
+  - Implementation: Added `verifyPaymentAmount()` helper, `paid` element display, updated `render()` to show amount and "Not Registered" state.
+  - Fixed Vitest module alias resolution to match Vite config for consistent import handling.
+- REFACTOR ✅
   - Extract minimal DOM helpers; document env hooks in template header.
+  - **Learning**: Template needs better error boundaries and timeout handling for `EmbersCore` calls.
+  - **Learning**: Vitest and Vite configs should stay synchronized for module resolution.
 
-Micro-task B2: Deduplicate by `feeTxid`
-- RED
+Micro-task B2: Deduplicate by `feeTxid` ✅ COMPLETED
+- RED ✅
   - Add test to ensure only latest unique tx is used in status summary.
-- GREEN
-  - Use `dedupeTxids` before summarizing.
-- REFACTOR (planning)
+- GREEN ✅
+  - Use `dedupeTxids` before summarizing; implemented order-preserving deduplication in `findRegistration()`.
+- REFACTOR ✅
   - Surface lastRegistration in a consistent JSON shape.
+  - **Learning**: O(n²) lookup acceptable for small children arrays; fallback behavior for missing EmbersCore.
 
-Micro-task B3: Developer debug flag
-  - Include `H_parent`, `H_child`, `feeHeight`, and `K` in debug output when available
- Micro-task B0 (new, optional): Provenance gating best-effort
-- RED
-  - `client/src/templates/inscription/__tests__/registrationWrapper.provenance.test.ts`
-  - When recursion endpoints expose child list with heights and parent satpoint height, wrapper enforces: latest `H_child == H_parent`, `fee.height ≤ H_child`, and `(H_child - fee.height) ≤ K`. When endpoints missing, wrapper fails closed.
-- GREEN
-  - Implement minimal helpers to read `H_parent` and `H_child` with timeouts; integrate into activation logic guarded by feature flag
-- REFACTOR (planning)
-  - Document ord minimum version for this optional path
-- RED
+Micro-task B3: Developer debug flag ✅ COMPLETED
+- RED ✅
   - When `DEBUG=1`, wrapper exposes `window.__debug` with last inputs/outputs; test presence gated by flag.
-- GREEN
-  - Implement gated attach; ensure removed when flag is false.
-- REFACTOR (planning)
+  - Add comprehensive tests for PII avoidance, provenance diagnostics, and debug object lifecycle.
+- GREEN ✅
+  - Implement gated attach with `attachDebugInfo()` function; ensure removed when flag is false.
+  - Include `H_parent`, `H_child`, `feeHeight`, and `K` in debug output when available via provenance diagnostics.
+  - Comprehensive PII filtering for inputs and outputs; BigInt serialization for JSON compatibility.
+- REFACTOR ✅
   - Document debug keys, avoid PII.
+  - **Learning**: Async timing critical for accurate diagnostic capture; sanitization required for both inputs and outputs.
+
+Micro-task B0 (optional): Provenance gating best-effort — DEFERRED
+- This optional enhancement deferred to maintain focus on core Phase 2 deliverables.
+- Future implementation can leverage existing parser utilities when recursion endpoints provide height data.
 
 Track C — Backend Status API
 Files: `server/src/routes/registration.ts`, controller + service integration

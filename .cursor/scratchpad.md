@@ -130,12 +130,15 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 ## Lessons
 
 ### Phase 2 Development Insights
-- **TDD Discipline**: Small, focused tests prevent overengineering
-- **Parser Parity**: Client/server consistency requires identical test cases  
-- **Fail-Closed Design**: Security-critical operations default to safe state
-- **Cache Strategy**: 30s TTL balances performance with data freshness
-- **Module Resolution**: Vitest and Vite configs must stay synchronized
-- **Template Integration**: Error boundaries needed for EmbersCore API calls
+- **TDD Discipline**: Small, focused tests prevent overengineering and ensure complete requirements coverage
+- **Parser Parity**: Client/server consistency requires identical test cases and deterministic results
+- **Fail-Closed Design**: Security-critical operations default to safe state when dependencies fail
+- **Cache Strategy**: 30s TTL balances performance with data freshness for inscription metadata
+- **Module Resolution**: Vitest and Vite configs must stay synchronized for consistent import handling
+- **Template Integration**: Error boundaries needed for EmbersCore API calls; async timing critical for diagnostics
+- **Debug Implementation**: PII sanitization must apply recursively to inputs and outputs; JSON serialization requires BigInt conversion
+- **Deduplication Logic**: Order-preserving uniqueness with graceful fallback for missing utilities
+- **Async Testing**: Template functions triggered by events require explicit waiting for async completion in tests
 
 ### Technical Decisions
 - **OP_RETURN Format**: `<nftId>|<expiryBlock>` canonical encoding
