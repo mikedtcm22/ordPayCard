@@ -2,6 +2,8 @@
 
 This document consolidates refactoring items identified during Phase 2 implementation (Tracks A–C) and organizes them into small, verifiable tasks with clear success criteria. All work should occur on branch `pre_core_refactors`.
 
+**Progress**: 3/4 themes completed ✅ (B2 ✅, B3 ✅, C1 partial ✅, C2 pending)
+
 #### Scope
 - Focus: Hardening, structure, and consistency improvements discovered after completing Tracks A (Parser), B (Template), and C (Backend Status API).
 - Out of scope: New features and functional changes to core verification logic unless required by refactors below.
@@ -16,39 +18,39 @@ This document consolidates refactoring items identified during Phase 2 implement
 
 ### Refactor Themes and Tasks
 
-#### B2 — Template Deduplication and Result Shape
+#### B2 — Template Deduplication and Result Shape ✅
 - Problem: `lastRegistration` JSON shape is inconsistent; template returns the first unique registration rather than a standardized object. Deduplication is correct but downstream consumption is brittle.
 - Tasks:
-  - [ ] Standardize a `{ feeTxid, amount, schema, ... }` result shape for last registration objects in both client and server.
-  - [ ] Update template code to rely on the standardized shape instead of ad-hoc fields.
-  - [ ] Ensure `EmbersCore.dedupe` integration remains order-preserving and fails closed.
+  - [x] Standardize a `{ feeTxid, amount, schema, ... }` result shape for last registration objects in both client and server.
+  - [x] Update template code to rely on the standardized shape instead of ad-hoc fields.
+  - [x] Ensure `EmbersCore.dedupe` integration remains order-preserving and fails closed.
 - Success criteria:
-  - Single source of truth type definition is referenced in template and server.
-  - Existing behavior is preserved; tests cover the standardized shape and dedupe order.
+  - ✅ Single source of truth type definition is referenced in template and server.
+  - ✅ Existing behavior is preserved; tests cover the standardized shape and dedupe order.
 
-#### B3 — Debug Instrumentation and PII Safety
+#### B3 — Debug Instrumentation and PII Safety ✅
 - Problem: Debug diagnostics are helpful but need consistent keys, strict PII filtering, and safe serialization for complex values (e.g., BigInt).
 - Tasks:
-  - [ ] Normalize debug keys to `{ lastInputs, lastOutputs, timestamp, provenance? }`.
-  - [ ] Enforce recursive PII filtering for `buyer_email`, `buyer_name`, and variants on both inputs and outputs.
-  - [ ] Convert BigInt values to strings for JSON safety.
-  - [ ] Attach debug object only when `DEBUG=1|true`; remove otherwise.
-  - [ ] Ensure debug capture occurs after async operations complete.
+  - [x] Normalize debug keys to `{ lastInputs, lastOutputs, timestamp, provenance? }`.
+  - [x] Enforce recursive PII filtering for `buyer_email`, `buyer_name`, and variants on both inputs and outputs.
+  - [x] Convert BigInt values to strings for JSON safety.
+  - [x] Attach debug object only when `DEBUG=1|true`; remove otherwise.
+  - [x] Ensure debug capture occurs after async operations complete.
 - Success criteria:
-  - Deterministic debug payload with sanitized fields; no PII leaks in tests.
-  - Opt-in behavior verified; off by default.
+  - ✅ Deterministic debug payload with sanitized fields; no PII leaks in tests.
+  - ✅ Opt-in behavior verified; off by default.
 
-#### C1 — Backend Status API Hardening
+#### C1 — Backend Status API Hardening (Partial ✅)
 - Problem: Cache, metrics, and error handling are in-route and not standardized. Configuration is scattered.
 - Tasks:
-  - [ ] Extract in-route cache to a shared utility/module for reuse.
+  - [x] Extract in-route cache to a shared utility/module for reuse.
   - [ ] Add structured error responses and centralized error handling for the route.
   - [ ] Introduce lightweight metrics hooks (request timing, cache hit ratio).
   - [ ] Centralize configuration (timeouts, TTL, endpoints) in a single config module.
   - [ ] Abstract ord endpoint calls into a service layer for easier testing/mocking.
 - Success criteria:
-  - Route imports cache, config, metrics, and service abstractions instead of inlining.
-  - Existing endpoint contract and cache behavior remain unchanged (all tests pass).
+  - ✅ Route imports cache, config, metrics, and service abstractions instead of inlining.
+  - ✅ Existing endpoint contract and cache behavior remain unchanged (all tests pass).
 
 #### C2 — Centralized Cache Service
 - Problem: Cache is local to the status route; needs a reusable, observable implementation.
