@@ -68,6 +68,7 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - [x] **Track C Complete**: Backend status API with endpoint contract and 30s cache freshness
 - [ ] **In Progress**: D1 - On-chain API library public surface
 - [ ] **Pending**: D2-D3, E1-E2
+ - [x] **Planning Artifact**: Created `docs/reg-phases/phase-2-refactors.md` to track refactors from Tracks A–C on branch `pre_core_refactors`
 
 ### TDD Progress Summary
 **Completed (GREEN)**:
@@ -130,6 +131,10 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 1. ✅ **RED**: Added cache behavior tests for TTL validation and timing verification
 2. ✅ **GREEN**: Confirmed existing cache implementation meets all requirements
 3. **REFACTOR**: Identified opportunities for centralized cache utility (planning only)
+
+### New Planning Artifact: Phase 2 Refactors (Pre-Core)
+
+- Created `docs/reg-phases/phase-2-refactors.md` consolidating refactor tasks for B2, B3, C1, and C2 with success criteria. All refactor work to proceed on branch `pre_core_refactors` using TDD. No code changes yet; this is a planning document only.
 
 ### Next Task: D1 - On-chain API Library Public Surface
 
