@@ -2,7 +2,7 @@
 
 This document consolidates refactoring items identified during Phase 2 implementation (Tracks A–C) and organizes them into small, verifiable tasks with clear success criteria. All work should occur on branch `pre_core_refactors`.
 
-**Progress**: 3/4 themes completed ✅ (B2 ✅, B3 ✅, C1 partial ✅, C2 pending)
+**Progress**: 3/4 themes completed ✅ (B2 ✅, B3 ✅, C1 ✅, C2 pending)
 
 #### Scope
 - Focus: Hardening, structure, and consistency improvements discovered after completing Tracks A (Parser), B (Template), and C (Backend Status API).
@@ -40,14 +40,14 @@ This document consolidates refactoring items identified during Phase 2 implement
   - ✅ Deterministic debug payload with sanitized fields; no PII leaks in tests.
   - ✅ Opt-in behavior verified; off by default.
 
-#### C1 — Backend Status API Hardening (Partial ✅)
+#### C1 — Backend Status API Hardening ✅
 - Problem: Cache, metrics, and error handling are in-route and not standardized. Configuration is scattered.
 - Tasks:
   - [x] Extract in-route cache to a shared utility/module for reuse.
   - [x] Add structured error responses and centralized error handling for the route.
   - [x] Introduce lightweight metrics hooks (request timing, cache hit ratio).
-  - [ ] Centralize configuration (timeouts, TTL, endpoints) in a single config module.
-  - [ ] Abstract ord endpoint calls into a service layer for easier testing/mocking.
+  - [x] Centralize configuration (timeouts, TTL, endpoints) in a single config module.
+  - [x] Abstract ord endpoint calls into a service layer for easier testing/mocking.
 - Success criteria:
   - ✅ Route imports cache, config, metrics, and service abstractions instead of inlining.
   - ✅ Existing endpoint contract and cache behavior remain unchanged (all tests pass).
