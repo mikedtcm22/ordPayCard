@@ -5,40 +5,101 @@ import { verifyPayment } from '../services/registration/parser/verifyPayment';
 import { dedupeTxids } from '../services/registration/parser/dedupe';
 import { normalizeRegistration } from '../types/registration';
 import { SimpleCache } from '../utils/cache';
+import { ApiError, ErrorCodes, asyncHandler } from '../middleware/errorHandler';
+import * as defaultMetrics from '../utils/metrics';
 
-const router = Router();
+// Metrics functions interface for dependency injection
+export interface MetricsFunctions {
+  recordRequest: (endpoint: string, duration: number) => void;
+  recordCacheOperation: (hit: boolean, key: string) => void;
+  triggerHook: (event: string, data: any) => void;
+}
 
-// Phase 2 enhanced validation cache for status endpoint
-const STATUS_CACHE_MS = 30_000; // 30 seconds
-const statusCache = new SimpleCache<unknown>({ ttlMs: STATUS_CACHE_MS });
+/**
+ * Create registration router with optional metrics injection
+ */
+export function createRegistrationRouter(metrics?: MetricsFunctions): Router {
+  const router = Router();
+  
+  // Use injected metrics or default singleton
+  const { recordRequest, recordCacheOperation, triggerHook } = metrics || defaultMetrics;
 
-// GET /api/registration/:nftId (Phase 2 Enhanced Validation)
-// Implements provenance gating, OP_RETURN validation, and debug info
-router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) => {
+  // Phase 2 enhanced validation cache for status endpoint
+  const STATUS_CACHE_MS = 30_000; // 30 seconds
+  const statusCache = new SimpleCache<unknown>({ ttlMs: STATUS_CACHE_MS });
+
+  // GET /api/registration/:nftId (Phase 2 Enhanced Validation)
+  // Implements provenance gating, OP_RETURN validation, and debug info
+  router.get('/:nftId', asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
+  const startTime = Date.now();
+  const endpoint = '/api/registration/:nftId';
+  
+  // Trigger before request hook
+  triggerHook('beforeRequest', {
+    endpoint,
+    method: req.method,
+    params: req.params
+  });
+  
   const { nftId } = req.params;
   
   // Validate inscription ID format
   if (!nftId || !/^[a-f0-9]{64}i\d+$/i.test(nftId)) {
-    res.status(400).json({ error: 'Invalid inscription ID format' });
-    return;
+    const duration = Math.max(1, Date.now() - startTime);
+    recordRequest(endpoint, duration);
+    triggerHook('afterRequest', {
+      endpoint,
+      method: req.method,
+      statusCode: 400,
+      duration
+    });
+    throw new ApiError(400, ErrorCodes.INVALID_INSCRIPTION_FORMAT, 'Invalid inscription ID format');
   }
 
   try {
     // Check cache first
     const cached = statusCache.get(nftId);
     if (cached) {
+      recordCacheOperation(true, nftId);
+      const duration = Math.max(1, Date.now() - startTime);
+      recordRequest(endpoint, duration);
+      triggerHook('afterRequest', {
+        endpoint,
+        method: req.method,
+        statusCode: 200,
+        duration
+      });
       res.json(cached);
       return;
     }
+    
+    // Cache miss
+    recordCacheOperation(false, nftId);
 
     // Dependencies for parser utilities
     async function fetchJson(url: string): Promise<unknown | null> {
       try {
         const r = await fetch(url, { redirect: 'follow' });
-        if (!r.ok) return null;
+        if (!r.ok) {
+          if (r.status >= 500) {
+            throw new ApiError(502, ErrorCodes.UPSTREAM_ERROR, 'Upstream service error', { upstreamStatus: r.status });
+          }
+          return null;
+        }
         const txt = await r.text();
-        try { return JSON.parse(txt); } catch { return null; }
-      } catch { return null; }
+        try { 
+          return JSON.parse(txt);
+        } catch {
+          throw new ApiError(502, ErrorCodes.DATA_PARSING_ERROR, 'Failed to parse upstream response');
+        }
+      } catch (err) {
+        if (err instanceof ApiError) throw err;
+        if (err instanceof Error && (err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED'))) {
+          throw new ApiError(503, ErrorCodes.SERVICE_UNAVAILABLE, 'Unable to fetch registration data', { reason: 'Network timeout or service unavailable' });
+        }
+        // Re-throw unexpected errors to be caught by error handler
+        throw err;
+      }
     }
 
     const fetchMeta = async (id: string) => fetchJson(`http://localhost:8080/r/metadata/${id}`);
@@ -178,20 +239,46 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
     // Cache the response
     statusCache.set(nftId, response);
     
+    // Record metrics
+    const duration = Math.max(1, Date.now() - startTime);
+    recordRequest(endpoint, duration);
+    triggerHook('afterRequest', {
+      endpoint,
+      method: req.method,
+      statusCode: 200,
+      duration
+    });
+    
     res.json(response);
   } catch (err) {
-    next(err);
+    // Handle specific error types
+    if (err instanceof Error) {
+      if (err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED')) {
+        throw new ApiError(
+          503, 
+          ErrorCodes.SERVICE_UNAVAILABLE, 
+          'Unable to fetch registration data',
+          { reason: 'Network timeout or service unavailable' }
+        );
+      }
+      if (err.message.includes('JSON')) {
+        throw new ApiError(
+          502,
+          ErrorCodes.DATA_PARSING_ERROR,
+          'Failed to parse upstream response'
+        );
+      }
+    }
+    throw err;
   }
-});
+}));
 
-// GET /api/registration/status/:inscriptionId
-// MVP: trust child receipts; validate schema, parent, creator, and fixed fee
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: NextFunction) => {
+  // GET /api/registration/status/:inscriptionId
+  // MVP: trust child receipts; validate schema, parent, creator, and fixed fee
+  router.get('/status/:inscriptionId', asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
   const { inscriptionId } = req.params;
   if (!inscriptionId || !/^[a-f0-9]{64}i\d+$/i.test(inscriptionId)) {
-    res.status(400).json({ error: 'Invalid inscription ID format' });
-    return;
+    throw new ApiError(400, ErrorCodes.INVALID_INSCRIPTION_FORMAT, 'Invalid inscription ID format');
   }
 
   try {
@@ -201,10 +288,26 @@ router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: 
     async function fetchJson(url: string): Promise<unknown | null> {
       try {
         const r = await fetch(url, { redirect: 'follow' });
-        if (!r.ok) return null;
+        if (!r.ok) {
+          if (r.status >= 500) {
+            throw new ApiError(502, ErrorCodes.UPSTREAM_ERROR, 'Upstream service error', { upstreamStatus: r.status });
+          }
+          return null;
+        }
         const txt = await r.text();
-        try { return JSON.parse(txt); } catch { return null; }
-      } catch { return null; }
+        try { 
+          return JSON.parse(txt);
+        } catch {
+          throw new ApiError(502, ErrorCodes.DATA_PARSING_ERROR, 'Failed to parse upstream response');
+        }
+      } catch (err) {
+        if (err instanceof ApiError) throw err;
+        if (err instanceof Error && (err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED'))) {
+          throw new ApiError(503, ErrorCodes.SERVICE_UNAVAILABLE, 'Unable to fetch registration data', { reason: 'Network timeout or service unavailable' });
+        }
+        // Re-throw unexpected errors to be caught by error handler
+        throw err;
+      }
     }
 
     // Try both ord endpoint variants to list children
@@ -248,14 +351,32 @@ router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: 
       debug: { inscriptionId, childCount: childIds.length },
     });
   } catch (err) {
-    res.status(500).json({ error: 'status_failed', message: (err as Error).message });
+    // Handle specific error types
+    if (err instanceof Error) {
+      if (err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED')) {
+        throw new ApiError(
+          503, 
+          ErrorCodes.SERVICE_UNAVAILABLE, 
+          'Unable to fetch registration data',
+          { reason: 'Network timeout or service unavailable' }
+        );
+      }
+      if (err.message.includes('JSON')) {
+        throw new ApiError(
+          502,
+          ErrorCodes.DATA_PARSING_ERROR,
+          'Failed to parse upstream response'
+        );
+      }
+    }
+    throw err;
   }
-});
+}));
 
-// POST /api/registration/create
-// Phase 0 placeholder: returns fee + creator address + instructions
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-router.post('/create', async (_req: Request, res: Response, _next: NextFunction) => {
+  // POST /api/registration/create
+  // Phase 0 placeholder: returns fee + creator address + instructions
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  router.post('/create', async (_req: Request, res: Response, _next: NextFunction) => {
   const creatorAddr = process.env['CREATOR_WALLET'] || 'tb1q-example-creator-address';
   const fixedFeeSats = parseInt(process.env['REGISTRATION_FEE_SATS'] || '50000', 10);
 
@@ -275,6 +396,12 @@ router.post('/create', async (_req: Request, res: Response, _next: NextFunction)
   });
 });
 
-export default router;
-export const v1RegistrationRouter = router;
+  return router;
+}
+
+// Create default instance with singleton metrics
+const defaultRouter = createRegistrationRouter();
+
+export default defaultRouter;
+export const v1RegistrationRouter = defaultRouter;
 

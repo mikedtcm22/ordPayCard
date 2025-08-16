@@ -168,7 +168,9 @@ describe('Phase 2 Cache Freshness (C2)', () => {
       const res2 = await request(app)
         .get(`/api/registration/${invalidNftId}`);
       expect(res2.status).toBe(400);
-      expect(res1.body).toEqual(res2.body);
+      // Compare error structure, but not request ID which is unique
+      expect(res1.body.error.code).toEqual(res2.body.error.code);
+      expect(res1.body.error.message).toEqual(res2.body.error.message);
     });
 
     it('should handle network issues gracefully', async () => {

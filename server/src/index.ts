@@ -95,6 +95,12 @@ app.get('/api', (req: Request, res: Response) => {
   });
 });
 
+// Metrics endpoint
+app.get('/api/metrics', (_req: Request, res: Response) => {
+  const metricsModule = require('./utils/metrics');
+  res.json(metricsModule.getApiMetrics());
+});
+
 // 404 handler
 app.use('*', (req: Request, res: Response) => {
   res.status(404).json({
