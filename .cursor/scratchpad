@@ -57,11 +57,57 @@
 - Validate that the IIFE format works correctly when loaded via script tag
 - Test that the bundle works in inscription environment (no network access)
 
+## D3: Loader Snippet - Refactoring Plan
+
+### Checksum Verification (Phase 3+)
+- Add SHA-256 hash verification of the loaded script content
+- Store expected hash in parent inscription or as a loader parameter
+- Reject scripts that don't match the expected hash
+- Consider using SubtleCrypto API for browser-native hashing
+
+### Caching Strategy
+- Implement localStorage caching of loaded scripts with version/height key
+- Check cache before fetching from network
+- Add cache invalidation based on block height or timestamp
+- Consider IndexedDB for larger script storage
+
+### Loading Performance
+- Add support for preloading/prefetching the script
+- Implement progressive loading with initial minimal API
+- Consider using Web Workers for script parsing in background
+
+### Error Recovery
+- Implement retry logic with exponential backoff
+- Provide fallback to a known good version if latest fails
+- Add telemetry/monitoring hooks for production debugging
+
+### Security Enhancements
+- Implement Content Security Policy (CSP) compatible loading
+- Add script isolation using sandboxed iframes if needed
+- Validate inscription IDs format before fetching
+
+### Developer Experience
+- Add TypeScript type definitions for the loader
+- Create a minified standalone version for embedding
+- Provide debug mode with verbose logging
+- Add performance timing metrics
+
+### Network Optimization
+- Support batch fetching of children metadata
+- Implement parallel fetching of content if multiple versions needed
+- Add support for compressed content (gzip)
+
+### Version Management
+- Support loading specific versions by height or ID
+- Add version compatibility checks
+- Implement graceful degradation for older browsers
+
 ## Progress Summary
 - D1 ✅: Established public API surface with verifyPayment, dedupe, and SEMVER exports
 - D2 ✅: Created build configuration producing 0.33KB gzipped bundle (well under 8KB limit)
+- D3 ✅: Implemented loader snippet that fetches and loads latest child inscription
 
 ## Next Steps
-- D3: Implement loader snippet that resolves latest child by parent ID
+- Track E: Tooling & examples (E1: bitcoin-cli OP_RETURN examples, E2: wallet troubleshooting guide)
 - Port server parser logic to client for actual functionality
 - Consider implementing the refactoring improvements during future iterations
