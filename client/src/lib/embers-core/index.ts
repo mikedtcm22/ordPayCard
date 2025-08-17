@@ -34,6 +34,33 @@ export interface VerifyPaymentOptions {
 }
 
 /**
+ * Result type for verifyPayment function
+ */
+export interface VerifyPaymentResult {
+  amount: bigint;
+  isValid: boolean;
+  errors: string[];
+}
+
+/**
+ * Result type for dedupe function
+ */
+export interface DedupeResult {
+  original: string[];
+  deduplicated: string[];
+  duplicateCount: number;
+}
+
+/**
+ * Build information metadata
+ */
+export interface BuildInfo {
+  version: string;
+  timestamp: string;
+  gitHash: string;
+}
+
+/**
  * Verifies a payment transaction meets registration requirements
  * @param txHexOrId - Raw transaction hex or transaction ID
  * @param creatorAddr - Creator's Bitcoin address to receive payment
