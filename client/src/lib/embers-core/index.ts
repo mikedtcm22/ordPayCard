@@ -3,10 +3,30 @@
  * Provides parser utilities for verifying registration payments and deduplication
  */
 
+// This will be replaced at build time with the actual version from package.json
+const PKG_VERSION = '__VERSION__';
+const BUILD_TIMESTAMP = '__TIMESTAMP__';
+const GIT_HASH = '__GIT_HASH__';
+
 /**
  * Semantic version of the EmbersCore library
  */
-export const SEMVER = '1.0.0';
+export const SEMVER = PKG_VERSION === '__VERSION__' ? '0.0.0' : PKG_VERSION;
+
+/**
+ * Get build information including version, timestamp, and git hash
+ */
+export function getBuildInfo(): BuildInfo {
+  return {
+    version: SEMVER,
+    timestamp: BUILD_TIMESTAMP === '__TIMESTAMP__' 
+      ? new Date().toISOString() 
+      : BUILD_TIMESTAMP,
+    gitHash: GIT_HASH === '__GIT_HASH__' 
+      ? 'development' 
+      : GIT_HASH
+  };
+}
 
 /**
  * Branded type for Bitcoin network names

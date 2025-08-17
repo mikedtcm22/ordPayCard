@@ -4,6 +4,7 @@ exports[`EmbersCore API Snapshot > should export only documented public API memb
 [
   "SEMVER",
   "dedupe",
+  "getBuildInfo",
   "isValidNetwork",
   "verifyPayment",
 ]
@@ -12,7 +13,7 @@ exports[`EmbersCore API Snapshot > should export only documented public API memb
 exports[`EmbersCore API Snapshot > should maintain stable SEMVER export 1`] = `
 {
   "format": true,
-  "major": "1",
+  "major": "0",
   "minor": "0",
   "patch": "0",
   "type": "string",

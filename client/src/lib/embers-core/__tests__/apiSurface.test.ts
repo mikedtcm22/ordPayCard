@@ -65,7 +65,7 @@ describe('EmbersCore API Surface', () => {
 
   it('should only export documented public API', () => {
     // Ensure we're not accidentally exposing internals
-    const publicExports = ['verifyPayment', 'dedupe', 'SEMVER', 'isValidNetwork'];
+    const publicExports = ['verifyPayment', 'dedupe', 'SEMVER', 'isValidNetwork', 'getBuildInfo'];
     const actualExports = Object.keys(EmbersCore);
     
     expect(actualExports.sort()).toEqual(publicExports.sort());

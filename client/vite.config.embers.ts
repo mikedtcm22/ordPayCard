@@ -5,8 +5,28 @@
 
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { readFileSync } from 'fs';
+import { execSync } from 'child_process';
+
+// Read version from package.json
+const packageJson = JSON.parse(
+  readFileSync(resolve(__dirname, 'package.json'), 'utf-8')
+);
+
+// Get git hash
+let gitHash = 'unknown';
+try {
+  gitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+} catch {
+  // Ignore git errors in CI or non-git environments
+}
 
 export default defineConfig({
+  define: {
+    '__VERSION__': JSON.stringify(packageJson.version),
+    '__TIMESTAMP__': JSON.stringify(new Date().toISOString()),
+    '__GIT_HASH__': JSON.stringify(gitHash)
+  },
   build: {
     lib: {
       entry: resolve(__dirname, 'src/lib/embers-core/index.ts'),
