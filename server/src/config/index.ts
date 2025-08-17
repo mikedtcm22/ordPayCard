@@ -203,9 +203,10 @@ class ConfigManager {
     }
 
     // Validate cache configs
-    ['status', 'metadata', 'children'].forEach(cacheType => {
+    const cacheTypes: (keyof CacheTypeConfig)[] = ['status', 'metadata', 'children'];
+    cacheTypes.forEach(cacheType => {
       if (updates.cache?.[cacheType]?.ttl !== undefined) {
-        if (updates.cache[cacheType].ttl <= 0) {
+        if (updates.cache[cacheType]!.ttl <= 0) {
           throw new Error(`Invalid ${cacheType} cache TTL: must be positive`);
         }
       }

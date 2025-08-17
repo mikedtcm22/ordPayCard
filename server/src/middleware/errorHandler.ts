@@ -86,7 +86,9 @@ function createErrorResponse(
   
   if (includeDebug) {
     response.error.details = { originalError: error.message };
-    response.error.stack = error.stack;
+    if (error.stack) {
+      response.error.stack = error.stack;
+    }
   }
   
   return response;

@@ -27,7 +27,7 @@ const logger = pino({
 });
 
 // Security middleware
-app.use(helmet());
+app.use(helmet() as RequestHandler);
 
 // CORS configuration
 app.use(
