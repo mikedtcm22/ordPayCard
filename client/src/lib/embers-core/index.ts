@@ -9,6 +9,31 @@
 export const SEMVER = '1.0.0';
 
 /**
+ * Branded type for Bitcoin network names
+ */
+export type Network = 'mainnet' | 'testnet' | 'signet' | 'regtest';
+
+/**
+ * Type guard to check if a value is a valid Network
+ */
+export function isValidNetwork(value: unknown): value is Network {
+  return typeof value === 'string' && 
+    ['mainnet', 'testnet', 'signet', 'regtest'].includes(value);
+}
+
+/**
+ * Options for verifyPayment function
+ */
+export interface VerifyPaymentOptions {
+  currentBlock: number;
+  network: Network;
+  childHeight?: number;
+  feeHeight?: number;
+  kWindow?: number;
+  fetchTx?: (txid: string) => Promise<string>;
+}
+
+/**
  * Verifies a payment transaction meets registration requirements
  * @param txHexOrId - Raw transaction hex or transaction ID
  * @param creatorAddr - Creator's Bitcoin address to receive payment
@@ -23,15 +48,13 @@ export async function verifyPayment(
   _creatorAddr: string,
   _minFee: bigint,
   _nftId: string,
-  _opts: {
-    currentBlock: number;
-    network: 'regtest' | 'signet' | 'testnet' | 'mainnet';
-    childHeight?: number;
-    feeHeight?: number;
-    kWindow?: number;
-    fetchTx?: (txid: string) => Promise<string>;
-  }
+  _opts: VerifyPaymentOptions
 ): Promise<bigint> {
+  // Runtime validation of network parameter
+  if (!isValidNetwork(_opts.network)) {
+    throw new Error('Invalid network');
+  }
+  
   // Minimal implementation for GREEN phase - always returns 0n
   return 0n;
 }

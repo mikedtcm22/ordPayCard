@@ -4,6 +4,7 @@ exports[`EmbersCore API Snapshot > should export only documented public API memb
 [
   "SEMVER",
   "dedupe",
+  "isValidNetwork",
   "verifyPayment",
 ]
 `;
