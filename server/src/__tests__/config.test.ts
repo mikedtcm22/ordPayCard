@@ -104,7 +104,8 @@ describe('Centralized Configuration Module', () => {
       updateConfig({
         registration: {
           cache: {
-            ttl: 120000 // 2 minutes
+            ttl: 120000, // 2 minutes
+            maxSize: 100
           }
         }
       });
@@ -167,9 +168,9 @@ describe('Centralized Configuration Module', () => {
     it('should allow different TTLs for different cache types', () => {
       updateConfig({
         cache: {
-          status: { ttl: 30000 },    // 30 seconds
-          metadata: { ttl: 300000 },  // 5 minutes
-          children: { ttl: 60000 }    // 1 minute
+          status: { ttl: 30000, maxSize: 100 },    // 30 seconds
+          metadata: { ttl: 300000, maxSize: 100 },  // 5 minutes
+          children: { ttl: 60000, maxSize: 100 }    // 1 minute
         }
       });
       
@@ -186,7 +187,8 @@ describe('Centralized Configuration Module', () => {
         updateConfig({
           registration: {
             cache: {
-              ttl: -1000 // Invalid negative TTL
+              ttl: -1000, // Invalid negative TTL
+              maxSize: 100
             }
           }
         });
@@ -196,7 +198,8 @@ describe('Centralized Configuration Module', () => {
         updateConfig({
           registration: {
             fees: {
-              registrationSats: 0 // Invalid zero fee
+              registrationSats: 0, // Invalid zero fee
+              creatorWallet: 'bc1test'
             }
           }
         });
