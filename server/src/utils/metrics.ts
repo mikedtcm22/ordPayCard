@@ -34,7 +34,7 @@ interface ExportedMetrics {
   }>;
 }
 
-type MetricsHook = (data: any) => void;
+type MetricsHook = (data: Record<string, unknown>) => void;
 
 export class MetricsCollector {
   private metrics: MetricsData;
@@ -164,13 +164,16 @@ export class MetricsCollector {
     if (!this.hooks.has(event)) {
       this.hooks.set(event, []);
     }
-    this.hooks.get(event)!.push(callback);
+    const hooks = this.hooks.get(event);
+    if (hooks) {
+      hooks.push(callback);
+    }
   }
 
   /**
    * Trigger hooks for an event
    */
-  triggerHook(event: string, data: any): void {
+  triggerHook(event: string, data: Record<string, unknown>): void {
     const hooks = this.hooks.get(event);
     if (hooks) {
       hooks.forEach(hook => hook(data));
@@ -180,7 +183,13 @@ export class MetricsCollector {
   /**
    * Get metrics for API response
    */
-  getApiMetrics(): any {
+  getApiMetrics(): {
+    timestamp: string;
+    metrics: {
+      requests: Record<string, RequestMetrics>;
+      cache: CacheMetrics;
+    };
+  } {
     return {
       timestamp: new Date().toISOString(),
       metrics: {
@@ -204,7 +213,7 @@ export const getMetrics = () => metricsCollector.getMetrics();
 export const exportMetrics = () => metricsCollector.exportMetrics();
 export const registerHook = (event: string, callback: MetricsHook) => 
   metricsCollector.registerHook(event, callback);
-export const triggerHook = (event: string, data: any) => 
+export const triggerHook = (event: string, data: Record<string, unknown>) => 
   metricsCollector.triggerHook(event, data);
 export const getApiMetrics = () => metricsCollector.getApiMetrics();
 

@@ -14,7 +14,7 @@ import { OrdinalsService } from '../services/ordinals.service';
 export interface MetricsFunctions {
   recordRequest: (endpoint: string, duration: number) => void;
   recordCacheOperation: (hit: boolean, key: string) => void;
-  triggerHook: (event: string, data: any) => void;
+  triggerHook: (event: string, data: Record<string, unknown>) => void;
 }
 
 // Optional service injection for testing
@@ -50,7 +50,7 @@ export function createRegistrationRouter(
 
   // GET /api/registration/:nftId (Phase 2 Enhanced Validation)
   // Implements provenance gating, OP_RETURN validation, and debug info
-  router.get('/:nftId', asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
+  router.get('/:nftId', asyncHandler(async (req: Request, res: Response) => {
   const startTime = Date.now();
   const endpoint = '/api/registration/:nftId';
   
@@ -253,7 +253,7 @@ export function createRegistrationRouter(
 
   // GET /api/registration/status/:inscriptionId
   // MVP: trust child receipts; validate schema, parent, creator, and fixed fee
-  router.get('/status/:inscriptionId', asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
+  router.get('/status/:inscriptionId', asyncHandler(async (req: Request, res: Response) => {
   const { inscriptionId } = req.params;
   if (!inscriptionId || !/^[a-f0-9]{64}i\d+$/i.test(inscriptionId)) {
     throw new ApiError(400, ErrorCodes.INVALID_INSCRIPTION_FORMAT, 'Invalid inscription ID format');

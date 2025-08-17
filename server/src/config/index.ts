@@ -50,6 +50,12 @@ export interface AppConfig {
   toJSON(): string;
 }
 
+export interface ConfigUpdates {
+  registration?: Partial<RegistrationConfig>;
+  network?: Partial<NetworkConfig>;
+  cache?: Partial<CacheTypeConfig>;
+}
+
 class ConfigManager {
   private config: AppConfig;
 
@@ -106,7 +112,8 @@ class ConfigManager {
       export: () => this.exportConfig(),
       toJSON: () => {
         // Serialize without the methods to avoid circular reference
-        const { export: _, toJSON: __, ...configData } = this.config;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { export: _export, toJSON: _toJSON, ...configData } = this.config;
         return JSON.stringify(configData, null, 2);
       }
     };
@@ -152,7 +159,7 @@ class ConfigManager {
       if (!['mainnet', 'testnet', 'signet', 'regtest'].includes(network)) {
         throw new Error(`Invalid Bitcoin network: ${network}`);
       }
-      this.config.network.bitcoin = network as any;
+      this.config.network.bitcoin = network as 'mainnet' | 'testnet' | 'signet' | 'regtest';
     }
   }
 
@@ -180,7 +187,7 @@ class ConfigManager {
     return exported;
   }
 
-  private validateConfig(updates: any): void {
+  private validateConfig(updates: ConfigUpdates): void {
     // Validate cache TTL
     if (updates.registration?.cache?.ttl !== undefined) {
       if (updates.registration.cache.ttl <= 0) {
@@ -209,7 +216,7 @@ class ConfigManager {
     return this.config;
   }
 
-  updateConfig(updates: any): void {
+  updateConfig(updates: ConfigUpdates): void {
     this.validateConfig(updates);
     
     // Deep merge updates into config
@@ -270,7 +277,7 @@ export function getConfig(): AppConfig {
 /**
  * Update configuration at runtime
  */
-export function updateConfig(updates: any): void {
+export function updateConfig(updates: ConfigUpdates): void {
   if (!configManager) {
     configManager = new ConfigManager();
   }

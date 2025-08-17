@@ -37,13 +37,24 @@ export const ErrorCodes = {
 /**
  * Create structured error response
  */
+interface ErrorResponse {
+  error: {
+    code: string;
+    message: string;
+    statusCode: number;
+    requestId: string;
+    details?: unknown;
+    stack?: string;
+  };
+}
+
 function createErrorResponse(
   error: ApiError | Error,
   requestId: string,
   includeDebug: boolean
-) {
+): ErrorResponse {
   if (error instanceof ApiError) {
-    const response: any = {
+    const response: ErrorResponse = {
       error: {
         code: error.code,
         message: error.message,
@@ -64,7 +75,7 @@ function createErrorResponse(
   }
   
   // Generic error handling
-  const response: any = {
+  const response: ErrorResponse = {
     error: {
       code: ErrorCodes.INTERNAL_ERROR,
       message: 'An internal error occurred',
@@ -84,13 +95,18 @@ function createErrorResponse(
 /**
  * Centralized error handling middleware
  */
+interface RequestWithId extends Request {
+  id?: string;
+}
+
 export function errorHandler(
   err: Error | ApiError,
   req: Request,
   res: Response,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next: NextFunction
 ): void {
-  const requestId = (req as any).id || uuidv4();
+  const requestId = (req as RequestWithId).id || uuidv4();
   const includeDebug = process.env['DEBUG'] === '1' || process.env['DEBUG'] === 'true';
   
   const statusCode = err instanceof ApiError ? err.statusCode : 500;

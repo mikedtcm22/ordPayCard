@@ -1,7 +1,6 @@
 import express, { Request, Response, RequestHandler } from 'express';
 import cors from 'cors';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const helmet = require('helmet');
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import pino from 'pino';
@@ -96,9 +95,9 @@ app.get('/api', (req: Request, res: Response) => {
 });
 
 // Metrics endpoint
-app.get('/api/metrics', (_req: Request, res: Response) => {
-  const metricsModule = require('./utils/metrics');
-  res.json(metricsModule.getApiMetrics());
+app.get('/api/metrics', async (_req: Request, res: Response) => {
+  const { getApiMetrics } = await import('./utils/metrics');
+  res.json(getApiMetrics());
 });
 
 // 404 handler
