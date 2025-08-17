@@ -168,6 +168,16 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - TDD automation now runs smoothly without manual interruption or Ctrl+C requirement
 
 ## Lessons
+## Documentation/Process Tasks Queued (from D1–D3 Refactor Notes)
+
+These are deliberately deferred and not part of the current code task plan. Keep in queue for a later documentation-focused pass.
+
+- **API docs generation**: Evaluate and wire up TypeDoc; add `docs:api` script; enrich JSDoc with `@example` blocks.
+- **Public API test locking (docs/process)**: Author guidance on snapshot test maintenance and contract test workflow.
+- **Changelog tooling**: Consider conventional commits + changelog generator; document release process.
+- **Shared fixtures documentation**: Document server/client shared fixture approach and parity guarantees.
+- **Build reporting docs**: Write guidance for interpreting size reports and visualizer artifacts.
+- **Loader developer guide**: Document checksum mode, caching behavior, and failure modes; add troubleshooting.
 
 ### Phase 2 Development Insights
 - **TDD Discipline**: Small, focused tests prevent overengineering and ensure complete requirements coverage

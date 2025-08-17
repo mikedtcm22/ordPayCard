@@ -65,6 +65,62 @@ This document consolidates refactoring items identified during Phase 2 implement
 
 ---
 
+### D — EmbersCore v1 and Loader Follow-ups (from D1–D3 Notes)
+
+The items below are prioritized code tasks for the Executor. Documentation/process tasks extracted from the same notes have been queued separately in `.cursor/scratchpad.md`.
+
+#### D1 — Public API Surface Hardening (Code)
+- Tasks:
+  - [ ] Add signature snapshot tests for public exports to detect breaking changes without widening the surface
+    - Targets: `verifyPayment`, `dedupe`, `SEMVER`, and exported option/result types
+  - [ ] Introduce a branded `Network` string type and propagate it through public function signatures
+  - [ ] Export input/option/result shapes as named TypeScript interfaces for clarity and IDE discoverability
+  - [ ] Add a JSON-schema based contract test that validates the runtime public API shape (name, arity, option keys)
+  - [ ] Implement `SEMVER` auto-read from `package.json` during build and ensure it is exported at runtime
+  - [ ] Establish server/client parity tests using shared fixtures to guarantee identical results
+- Success criteria:
+  - ✅ A failing snapshot test is produced by intentional signature drift and passes when reverted
+  - ✅ Type checker enforces `Network` usage across public entry points
+  - ✅ Public option/result types are named and imported in tests without `any`
+  - ✅ Contract test validates API shape; build exports `SEMVER` from `package.json`
+  - ✅ Parity tests run the same fixtures against server and client and assert identical outputs
+
+#### D2 — Build Configuration, Size Budget, and CI (Code)
+- Tasks:
+  - [ ] Add `postbuild:embers-core` script that reports gzipped size and exits non-zero over 8KB
+  - [ ] Add size budget manifest `embers-core.size-budget.json` with thresholds; enforce in CI
+  - [ ] Add CI workflow to run build + size checks on every PR and fail on regression
+  - [ ] Add `analyze:embers-core` script using `rollup-plugin-visualizer` to emit an artifact (e.g., `stats.html`)
+  - [ ] Inject build metadata (version, timestamp, git hash) into the bundle and expose via a stable export
+  - [ ] Add browser-like integration tests that load the built IIFE via a simulated `<script>` in jsdom/happy-dom
+  - [ ] Verify the bundle works in an inscription-like environment (no network; restricted globals)
+- Success criteria:
+  - ✅ Local `npm run build` prints gzipped size and enforces ≤ 8KB
+  - ✅ CI fails when size exceeds budget and passes otherwise
+  - ✅ Visualizer artifact is generated and attached to CI run
+  - ✅ An exported `buildInfo` object contains `{ version, timestamp, gitHash }` and is covered by tests
+  - ✅ Integration tests import and execute the built IIFE without throwing
+
+#### D3 — Loader Snippet Resilience and Safety (Code)
+- Tasks:
+  - [ ] Optional checksum verification using `SubtleCrypto` when `expectedHash` is provided; reject mismatches
+  - [ ] Local caching of loaded scripts keyed by `{ parentId, height }` with invalidation strategy
+  - [ ] Exponential backoff retry with a bounded number of attempts and jitter
+  - [ ] Fallback to last known good cached version when latest fails
+  - [ ] Strict input validation for inscription IDs before fetching
+  - [ ] Batch and parallel fetching for children metadata with bounded concurrency
+  - [ ] Support loading a specific version by height or exact ID, in addition to "latest"
+- Success criteria:
+  - ✅ Unit tests verify hash pass/fail paths using deterministic fixtures
+  - ✅ Cache hit/miss behavior verified with fake timers; invalidation rules covered
+  - ✅ Retry/backoff attempts verified with fake timers; no unbounded loops
+  - ✅ Fallback path returns cached content when latest retrieval fails
+  - ✅ Invalid IDs are rejected early with a typed error; valid IDs proceed
+  - ✅ Parallelization improves latency without exceeding concurrency limits in tests
+  - ✅ API supports `load({ target: 'latest' | { id } | { height } })` and is covered by tests
+
+---
+
 ### Guardrails
 - Maintain fail-closed behavior throughout templates and APIs.
 - Do not widen public surfaces without tests locking behavior.

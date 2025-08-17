@@ -1,0 +1,52 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EmbersCore API Snapshot > should export only documented public API members 1`] = `
+[
+  "SEMVER",
+  "dedupe",
+  "verifyPayment",
+]
+`;
+
+exports[`EmbersCore API Snapshot > should maintain stable SEMVER export 1`] = `
+{
+  "format": true,
+  "major": "1",
+  "minor": "0",
+  "patch": "0",
+  "type": "string",
+}
+`;
+
+exports[`EmbersCore API Snapshot > should maintain stable dedupe signature 1`] = `
+{
+  "isAsync": false,
+  "length": 1,
+  "name": "dedupe",
+  "params": [
+    "txids",
+  ],
+}
+`;
+
+exports[`EmbersCore API Snapshot > should maintain stable type signatures for options 1`] = `
+{
+  "dedupe": 1,
+  "verifyPayment": 5,
+}
+`;
+
+exports[`EmbersCore API Snapshot > should maintain stable verifyPayment signature 1`] = `
+{
+  "isAsync": true,
+  "length": 5,
+  "name": "verifyPayment",
+  "params": [
+    "txHexOrId",
+    "creatorAddr",
+    "minFee",
+    "nftId",
+    "opts",
+  ],
+}
+`;
