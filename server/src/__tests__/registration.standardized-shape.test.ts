@@ -1,3 +1,38 @@
+// Mock the OrdinalsService before importing the app
+jest.mock('../services/ordinals.service', () => {
+  return {
+    OrdinalsService: jest.fn().mockImplementation(() => {
+      return {
+        fetchMetadata: jest.fn().mockResolvedValue({
+          id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaai0',
+          number: 12345,
+          address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+          genesis_height: 100000,
+          content_type: 'text/plain',
+          content_length: 100
+        }),
+        fetchChildren: jest.fn().mockResolvedValue([{
+          id: 'child123i0',
+          inscription_id: 'child123i0'
+        }]),
+        fetchContent: jest.fn().mockResolvedValue(JSON.stringify({
+          p: 'bop-420',
+          op: 'reg',
+          schema: 'registration.v1',
+          parent: 'parent123i0',
+          paid_to: 'tb1qexample',
+          fee_sats: 50000,
+          txid: 'deadbeef123'
+        })),
+        fetchTransaction: jest.fn().mockResolvedValue({
+          id: 'test-tx-id',
+          outputs: []
+        })
+      };
+    })
+  };
+});
+
 import request from 'supertest';
 import app from '../index';
 import { normalizeRegistration } from '../types/registration';

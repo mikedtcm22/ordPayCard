@@ -7,6 +7,30 @@
  * - Proper cache isolation per nftId
  */
 
+// Mock the OrdinalsService before importing the app
+jest.mock('../services/ordinals.service', () => {
+  return {
+    OrdinalsService: jest.fn().mockImplementation(() => {
+      return {
+        fetchMetadata: jest.fn().mockResolvedValue({
+          id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaai0',
+          number: 12345,
+          address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+          genesis_height: 100000,
+          content_type: 'text/plain',
+          content_length: 100
+        }),
+        fetchChildren: jest.fn().mockResolvedValue([]),
+        fetchContent: jest.fn().mockResolvedValue('test content'),
+        fetchTransaction: jest.fn().mockResolvedValue({
+          id: 'test-tx-id',
+          outputs: []
+        })
+      };
+    })
+  };
+});
+
 import request from 'supertest';
 import app from '../index';
 
