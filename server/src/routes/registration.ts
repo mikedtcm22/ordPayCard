@@ -3,74 +3,113 @@ import { getLastTransferHeight } from '../services/registration/parser/lastTrans
 import { getLatestChildHeight } from '../services/registration/parser/latestChildHeight';
 import { verifyPayment } from '../services/registration/parser/verifyPayment';
 import { dedupeTxids } from '../services/registration/parser/dedupe';
+import { normalizeRegistration } from '../types/registration';
+import { CacheService } from '../services/cache.service';
+import { ApiError, ErrorCodes, asyncHandler } from '../middleware/errorHandler';
+import * as defaultMetrics from '../utils/metrics';
+import { getConfig } from '../config';
+import { OrdinalsService } from '../services/ordinals.service';
 
-const router = Router();
+// Metrics functions interface for dependency injection
+export interface MetricsFunctions {
+  recordRequest: (endpoint: string, duration: number) => void;
+  recordCacheOperation: (hit: boolean, key: string) => void;
+  triggerHook: (event: string, data: Record<string, unknown>) => void;
+}
 
-// Phase 2 enhanced validation cache for status endpoint
-const STATUS_CACHE_MS = 30_000; // 30 seconds
-type StatusCacheEntry = { data: unknown; expiresAtMs: number };
-const statusCache: Map<string, StatusCacheEntry> = new Map();
+// Optional service injection for testing
+export interface ServiceDependencies {
+  ordinalsService?: OrdinalsService;
+  cacheService?: CacheService;
+}
 
-// GET /api/registration/:nftId (Phase 2 Enhanced Validation)
-// Implements provenance gating, OP_RETURN validation, and debug info
-router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) => {
+/**
+ * Create registration router with optional metrics and service injection
+ */
+export function createRegistrationRouter(
+  metrics?: MetricsFunctions,
+  services?: ServiceDependencies
+): Router {
+  const router = Router();
+  
+  // Use injected metrics or default singleton
+  const { recordRequest, recordCacheOperation, triggerHook } = metrics || defaultMetrics;
+
+  // Get configuration
+  const config = getConfig();
+  
+  // Initialize services
+  const ordinalsService = services?.ordinalsService || new OrdinalsService(config);
+  const cacheService = services?.cacheService || new CacheService();
+  
+  // Configure cache with settings from config
+  cacheService.configure('status', {
+    ttl: config.cache.status.ttl,
+    maxSize: config.cache.status.maxSize
+  });
+
+  // GET /api/registration/:nftId (Phase 2 Enhanced Validation)
+  // Implements provenance gating, OP_RETURN validation, and debug info
+  router.get('/:nftId', asyncHandler(async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const endpoint = '/api/registration/:nftId';
+  
+  // Trigger before request hook
+  triggerHook('beforeRequest', {
+    endpoint,
+    method: req.method,
+    params: req.params
+  });
+  
   const { nftId } = req.params;
   
   // Validate inscription ID format
   if (!nftId || !/^[a-f0-9]{64}i\d+$/i.test(nftId)) {
-    res.status(400).json({ error: 'Invalid inscription ID format' });
-    return;
+    const duration = Math.max(1, Date.now() - startTime);
+    recordRequest(endpoint, duration);
+    triggerHook('afterRequest', {
+      endpoint,
+      method: req.method,
+      statusCode: 400,
+      duration
+    });
+    throw new ApiError(400, ErrorCodes.INVALID_INSCRIPTION_FORMAT, 'Invalid inscription ID format');
   }
 
   try {
     // Check cache first
-    const now = Date.now();
-    const cached = statusCache.get(nftId);
-    if (cached && now < cached.expiresAtMs) {
-      res.json(cached.data);
+    const cached = cacheService.get(nftId, 'status');
+    if (cached) {
+      recordCacheOperation(true, nftId);
+      const duration = Math.max(1, Date.now() - startTime);
+      recordRequest(endpoint, duration);
+      triggerHook('afterRequest', {
+        endpoint,
+        method: req.method,
+        statusCode: 200,
+        duration
+      });
+      res.json(cached);
       return;
     }
+    
+    // Cache miss
+    recordCacheOperation(false, nftId);
 
     // Dependencies for parser utilities
-    async function fetchJson(url: string): Promise<unknown | null> {
-      try {
-        const r = await fetch(url, { redirect: 'follow' });
-        if (!r.ok) return null;
-        const txt = await r.text();
-        try { return JSON.parse(txt); } catch { return null; }
-      } catch { return null; }
-    }
-
-    const fetchMeta = async (id: string) => fetchJson(`http://localhost:8080/r/metadata/${id}`);
-    const fetchTx = async (txid: string) => fetchJson(`http://localhost:8080/r/tx/${txid}`);
-    const fetchChildren = async (id: string) => {
-      const variants = [
-        `http://localhost:8080/r/children/${id}/inscriptions`,
-        `http://localhost:8080/r/children/${id}`,
-      ];
-      for (const url of variants) {
-        const data = await fetchJson(url);
-        if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['children'])) {
-          const children = (data as Record<string, unknown>)['children'] as unknown[];
-          return children.map((c: unknown) => (c && typeof c === 'object' ? c : { id: c }));
-        }
-        if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['ids'])) {
-          const ids = (data as Record<string, unknown>)['ids'] as string[];
-          return ids.map((id: string) => ({ id }));
-        }
-      }
-      return [];
-    };
+    const fetchMeta = async (id: string) => ordinalsService.fetchMetadata(id);
+    const fetchTx = async (txid: string) => ordinalsService.fetchTransaction(txid);
+    const fetchChildren = async (id: string) => ordinalsService.fetchChildren(id);
 
     // Derive heights for provenance gating
     const H_parent = await getLastTransferHeight(nftId, { fetchMeta, fetchTx });
     const H_child = await getLatestChildHeight(nftId, { fetchChildren });
     
     // Configuration
-    const creatorAddr = process.env['CREATOR_WALLET'] || '';
-    const fixedFeeSats = BigInt(parseInt(process.env['REGISTRATION_FEE_SATS'] || '50000', 10));
-    const K = parseInt(process.env['PROVENANCE_WINDOW_K'] || '1', 10);
-    const currentBlock = parseInt(process.env['CURRENT_BLOCK_HEIGHT'] || '1000', 10);
+    const creatorAddr = config.registration.fees.creatorWallet;
+    const fixedFeeSats = BigInt(config.registration.fees.registrationSats);
+    const K = config.registration.provenance.windowK;
+    const currentBlock = config.registration.provenance.currentBlockHeight;
 
     // Fetch children and validate registrations
     const children = await fetchChildren(nftId);
@@ -86,7 +125,7 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
         const childObj = child as Record<string, unknown>;
         if (!childObj['id']) continue;
         
-        const reg = await fetchJson(`http://localhost:8080/content/${childObj['id']}`);
+        const reg = await ordinalsService.fetchContent(childObj['id'] as string);
         if (!reg || typeof reg !== 'object') continue;
         const regObj = reg as Record<string, unknown>;
         if (regObj['schema'] !== 'buyer_registration.v1') continue;
@@ -131,9 +170,10 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
               if (!child || typeof child !== 'object') continue;
               const childObj = child as Record<string, unknown>;
               if (!childObj['id']) continue;
-              const reg = await fetchJson(`http://localhost:8080/content/${childObj['id']}`);
+              const reg = await ordinalsService.fetchContent(childObj['id'] as string);
               if (reg && typeof reg === 'object' && (reg as Record<string, unknown>)['feeTxid'] === feeTxid) {
-                lastRegistration = { ...reg, childId: childObj['id'], verifiedAmount: verifiedAmount.toString() };
+                const rawReg = { ...reg, childId: childObj['id'], verifiedAmount: verifiedAmount.toString() };
+                lastRegistration = normalizeRegistration(rawReg);
                 break;
               }
             }
@@ -175,67 +215,69 @@ router.get('/:nftId', async (req: Request, res: Response, next: NextFunction) =>
     };
 
     // Cache the response
-    statusCache.set(nftId, { data: response, expiresAtMs: now + STATUS_CACHE_MS });
+    cacheService.set(nftId, response, 'status');
+    
+    // Record metrics
+    const duration = Math.max(1, Date.now() - startTime);
+    recordRequest(endpoint, duration);
+    triggerHook('afterRequest', {
+      endpoint,
+      method: req.method,
+      statusCode: 200,
+      duration
+    });
     
     res.json(response);
   } catch (err) {
-    next(err);
+    // Handle specific error types
+    if (err instanceof Error) {
+      if (err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED')) {
+        throw new ApiError(
+          503, 
+          ErrorCodes.SERVICE_UNAVAILABLE, 
+          'Unable to fetch registration data',
+          { reason: 'Network timeout or service unavailable' }
+        );
+      }
+      if (err.message.includes('JSON')) {
+        throw new ApiError(
+          502,
+          ErrorCodes.DATA_PARSING_ERROR,
+          'Failed to parse upstream response'
+        );
+      }
+    }
+    throw err;
   }
-});
+}));
 
-// GET /api/registration/status/:inscriptionId
-// MVP: trust child receipts; validate schema, parent, creator, and fixed fee
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: NextFunction) => {
+  // GET /api/registration/status/:inscriptionId
+  // MVP: trust child receipts; validate schema, parent, creator, and fixed fee
+  router.get('/status/:inscriptionId', asyncHandler(async (req: Request, res: Response) => {
   const { inscriptionId } = req.params;
   if (!inscriptionId || !/^[a-f0-9]{64}i\d+$/i.test(inscriptionId)) {
-    res.status(400).json({ error: 'Invalid inscription ID format' });
-    return;
+    throw new ApiError(400, ErrorCodes.INVALID_INSCRIPTION_FORMAT, 'Invalid inscription ID format');
   }
 
   try {
-    const creatorAddr = process.env['CREATOR_WALLET'] || '';
-    const fixedFeeSats = parseInt(process.env['REGISTRATION_FEE_SATS'] || '50000', 10);
+    const creatorAddr = config.registration.fees.creatorWallet;
+    const fixedFeeSats = config.registration.fees.registrationSats;
 
-    async function fetchJson(url: string): Promise<unknown | null> {
-      try {
-        const r = await fetch(url, { redirect: 'follow' });
-        if (!r.ok) return null;
-        const txt = await r.text();
-        try { return JSON.parse(txt); } catch { return null; }
-      } catch { return null; }
-    }
-
-    // Try both ord endpoint variants to list children
-    const variants = [
-      `http://localhost:8080/r/children/${inscriptionId}/inscriptions`,
-      `http://localhost:8080/r/children/${inscriptionId}`,
-    ];
-    let childIds: string[] = [];
-    for (const u of variants) {
-      const data = await fetchJson(u);
-      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['children'])) {
-        // Newer ord returns objects; older may return strings
-        const children = (data as Record<string, unknown>)['children'] as unknown[];
-        childIds = children.map((c: unknown) => (c && typeof c === 'object' ? (c as Record<string, unknown>)['id'] as string : c as string)).filter(Boolean);
-        break;
-      }
-      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>)['ids'])) { 
-        childIds = (data as Record<string, unknown>)['ids'] as string[]; 
-        break; 
-      }
-    }
+    // Fetch children using service layer
+    const children = await ordinalsService.fetchChildren(inscriptionId);
+    const childIds = children.map(c => c.id);
 
     let lastRegistration: unknown = null;
     for (const cid of childIds) {
-      const reg = await fetchJson(`http://localhost:8080/content/${cid}`);
+      const reg = await ordinalsService.fetchContent(cid);
       if (!reg || typeof reg !== 'object') continue;
       const regObj = reg as Record<string, unknown>;
       if (regObj['schema'] !== 'buyer_registration.v1') continue;
       if (regObj['parent'] !== inscriptionId) continue;
       if (creatorAddr && regObj['paid_to'] && regObj['paid_to'] !== creatorAddr) continue;
       if (typeof regObj['fee_sats'] === 'number' && regObj['fee_sats'] < fixedFeeSats) continue;
-      lastRegistration = { ...regObj, childId: cid };
+      const rawReg = { ...regObj, childId: cid };
+      lastRegistration = normalizeRegistration(rawReg);
     }
 
     const isRegistered = !!lastRegistration;
@@ -246,16 +288,34 @@ router.get('/status/:inscriptionId', async (req: Request, res: Response, _next: 
       debug: { inscriptionId, childCount: childIds.length },
     });
   } catch (err) {
-    res.status(500).json({ error: 'status_failed', message: (err as Error).message });
+    // Handle specific error types
+    if (err instanceof Error) {
+      if (err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED')) {
+        throw new ApiError(
+          503, 
+          ErrorCodes.SERVICE_UNAVAILABLE, 
+          'Unable to fetch registration data',
+          { reason: 'Network timeout or service unavailable' }
+        );
+      }
+      if (err.message.includes('JSON')) {
+        throw new ApiError(
+          502,
+          ErrorCodes.DATA_PARSING_ERROR,
+          'Failed to parse upstream response'
+        );
+      }
+    }
+    throw err;
   }
-});
+}));
 
-// POST /api/registration/create
-// Phase 0 placeholder: returns fee + creator address + instructions
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-router.post('/create', async (_req: Request, res: Response, _next: NextFunction) => {
-  const creatorAddr = process.env['CREATOR_WALLET'] || 'tb1q-example-creator-address';
-  const fixedFeeSats = parseInt(process.env['REGISTRATION_FEE_SATS'] || '50000', 10);
+  // POST /api/registration/create
+  // Phase 0 placeholder: returns fee + creator address + instructions
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  router.post('/create', async (_req: Request, res: Response, _next: NextFunction) => {
+  const creatorAddr = config.registration.fees.creatorWallet || 'tb1q-example-creator-address';
+  const fixedFeeSats = config.registration.fees.registrationSats;
 
   res.json({
     fee: { amountSats: fixedFeeSats, currency: 'sats' },
@@ -273,6 +333,12 @@ router.post('/create', async (_req: Request, res: Response, _next: NextFunction)
   });
 });
 
-export default router;
-export const v1RegistrationRouter = router;
+  return router;
+}
+
+// Create default instance with singleton metrics
+const defaultRouter = createRegistrationRouter();
+
+export default defaultRouter;
+export const v1RegistrationRouter = defaultRouter;
 

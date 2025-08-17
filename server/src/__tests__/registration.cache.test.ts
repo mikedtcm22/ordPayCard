@@ -7,6 +7,30 @@
  * - Proper cache isolation per nftId
  */
 
+// Mock the OrdinalsService before importing the app
+jest.mock('../services/ordinals.service', () => {
+  return {
+    OrdinalsService: jest.fn().mockImplementation(() => {
+      return {
+        fetchMetadata: jest.fn().mockResolvedValue({
+          id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaai0',
+          number: 12345,
+          address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+          genesis_height: 100000,
+          content_type: 'text/plain',
+          content_length: 100
+        }),
+        fetchChildren: jest.fn().mockResolvedValue([]),
+        fetchContent: jest.fn().mockResolvedValue('test content'),
+        fetchTransaction: jest.fn().mockResolvedValue({
+          id: 'test-tx-id',
+          outputs: []
+        })
+      };
+    })
+  };
+});
+
 import request from 'supertest';
 import app from '../index';
 
@@ -168,7 +192,9 @@ describe('Phase 2 Cache Freshness (C2)', () => {
       const res2 = await request(app)
         .get(`/api/registration/${invalidNftId}`);
       expect(res2.status).toBe(400);
-      expect(res1.body).toEqual(res2.body);
+      // Compare error structure, but not request ID which is unique
+      expect(res1.body.error.code).toEqual(res2.body.error.code);
+      expect(res1.body.error.message).toEqual(res2.body.error.message);
     });
 
     it('should handle network issues gracefully', async () => {

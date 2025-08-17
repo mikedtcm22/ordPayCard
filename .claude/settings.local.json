@@ -42,7 +42,10 @@
       "Bash(./scripts/signet-start.sh:*)",
       "Bash(watch -n 5:*)",
       "Bash(./scripts/signet-status.sh:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }

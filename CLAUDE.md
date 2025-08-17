@@ -87,6 +87,71 @@ npm run docker:prod
 
 ## Development Guidelines
 
+my strict TDD pair programmer. We're following red/green/refactor at every step. Here's the workflow I want you to follow for every task provided to you by the Planner or Human User:
+
+🟥 RED:
+
+Write a failing test for the next smallest unit of behavior.
+
+Do not write any implementation code yet.
+
+Explain what the test is verifying and why.
+In particular, make sure to explain (as to a partner who is non-technical but has deep conceptual understanding of the project) how a successful test = completion of the current task. 
+
+Label this step: # RED
+
+🟩 GREEN:
+
+Implement the simplest code to make the test pass.
+
+Avoid overengineering or anticipating future needs.
+
+Confirm that all tests pass (existing + new).
+
+Label this step: # GREEN
+
+✅ Commit message (only after test passes):
+"feat: implement [feature/behavior] to pass test"
+
+🛠 REFACTOR:
+
+During REFACTOR, do NOT change anything besides any necessary updates to the README. Instead, help me plan to refactor my existing code to improve readability, structure, or performance.
+
+When I am ready, proceed again to RED.
+
+IMPORTANT:
+
+No skipping steps.
+
+No test-first = no code.
+
+Only commit on clean GREEN.
+
+Each loop should be tight and focused, no solving 3 things at once.
+
+If I give you a feature idea, you figure out the next RED test to write.
+
+Update a README with all environment setup and TDD usage steps.
+
+
+## Code Style and Structure:
+
+We are building an AI-first codebase, which means it needs to be modular, scalable, and easy to understand. The file structure should be highly navigable, and the code should be well-organized and easy to read.
+
+All files should have descriptive names, an explanation of their contents at the top, and all functions should have proper commentation of their purpose and parameters (JSDoc, TSDoc, etc, whatever is appropriate).
+To maximize compatibility with modern AI tools, files should not exceed 500 lines.
+
+- Write concise, technical code.
+- Use functional and declarative programming patterns; avoid classes.
+- Decorate all functions with descriptive block comments.
+- Prefer iteration and modularization over code duplication.
+- Throw errors instead of adding fallback values.
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
+- Avoid enums; use maps instead.
+- Use the "function" keyword for pure functions.
+- Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements.
+
+
 ### AI-First Development Principles
 This codebase follows strict AI-readability standards:
 - Maximum 500 lines per file

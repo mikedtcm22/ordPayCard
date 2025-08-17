@@ -66,8 +66,10 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - [x] **Track A Complete**: Server parser library with all utilities and tests
 - [x] **Track B Complete**: Template updates with parser integration, deduplication, and debug features
 - [x] **Track C Complete**: Backend status API with endpoint contract and 30s cache freshness
+- [x] **Pre-Core Refactors**: B2, B3, C1.1 completed on `pre_core_refactors` branch
 - [ ] **In Progress**: D1 - On-chain API library public surface
-- [ ] **Pending**: D2-D3, E1-E2
+- [ ] **Pending**: D2-D3, E1-E2, C1.2-C1.5, C2
+- [x] **Planning Artifact**: Created `docs/reg-phases/phase-2-refactors.md` to track refactors from Tracks A–C on branch `pre_core_refactors`
 
 ### TDD Progress Summary
 **Completed (GREEN)**:
@@ -87,7 +89,7 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 
 ### Development Environment Status
 - **Node.js**: v22.17.1 (NVM managed)
-- **Testing**: 182 total tests passing (server: 159, client: 23)
+- **Testing**: 176 total tests passing (server: 176, client: 23)
 - **CI/CD**: Fully operational with strict linting enforcement
 - **Docker**: Development and production configurations ready
 
@@ -130,6 +132,18 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 1. ✅ **RED**: Added cache behavior tests for TTL validation and timing verification
 2. ✅ **GREEN**: Confirmed existing cache implementation meets all requirements
 3. **REFACTOR**: Identified opportunities for centralized cache utility (planning only)
+
+### Completed Task: Phase 2 Refactors (Pre-Core)
+
+**Objective**: ✅ Implemented structural improvements identified during Tracks A-C
+
+**Achievements**:
+1. ✅ **B2**: Standardized registration object shapes with `normalizeRegistration()` utility
+2. ✅ **B3**: Confirmed comprehensive debug instrumentation already implemented (PII filtering, BigInt safety, opt-in behavior)
+3. ✅ **C1.1**: Extracted in-route cache to reusable `SimpleCache` utility with TTL and cleanup
+4. **REFACTOR**: Additional backend hardening (C1.2-C1.5) and enhanced cache service (C2) pending
+
+**Impact**: 176 tests passing, improved data consistency, enhanced reusability, zero breaking changes
 
 ### Next Task: D1 - On-chain API Library Public Surface
 
@@ -198,6 +212,14 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - **Configuration**: Environment variables for timeouts, cache TTL, and network endpoints should be centralized
 - **Network Abstraction**: ord endpoint calls should be abstracted into service layer for easier testing and mocking
 - **Response Optimization**: Consider partial response caching to reduce computation for frequently accessed debug fields
+
+### REFACTOR Notes for C1 - Error Handling (Completed)
+- **Error Categorization**: Consider adding more specific error codes (e.g., `INSCRIPTION_NOT_FOUND`, `CACHE_ERROR`) for better granularity
+- **Error Logging**: Add structured logging when errors occur to help with debugging and monitoring
+- **Error Response Consistency**: Consider adding timestamps to error responses for debugging correlation
+- **Performance**: Current error handler creates new error objects which is fine, but could consider factory pattern for common errors
+- **Documentation**: Add JSDoc comments for all error codes and their meanings to improve maintainability
+- **Type Safety**: Create TypeScript types for error responses to ensure consistency across the API
 
 ### REFACTOR Notes for C2
 - **Centralized Cache Service**: Extract status cache into shared `CacheService` class with TTL management, LRU eviction, and metrics
