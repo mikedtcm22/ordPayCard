@@ -8,8 +8,8 @@ import { JSDOM } from 'jsdom';
 
 describe('EmbersCore Loader', () => {
   let dom: JSDOM;
-  let window: any;
-  let document: any;
+  let window: Window & typeof globalThis;
+  let document: Document;
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -19,7 +19,7 @@ describe('EmbersCore Loader', () => {
       runScripts: 'dangerously',
       resources: 'usable'
     });
-    window = dom.window;
+    window = dom.window as Window & typeof globalThis;
     document = window.document;
     
     // Mock fetch API
@@ -27,9 +27,9 @@ describe('EmbersCore Loader', () => {
     window.fetch = fetchMock;
     
     // Make window/document available globally for the loader
-    global.window = window as any;
-    global.document = document as any;
-    global.fetch = fetchMock as any;
+    global.window = window as Window & typeof globalThis;
+    global.document = document as Document;
+    global.fetch = fetchMock as typeof fetch;
   });
 
   afterEach(() => {

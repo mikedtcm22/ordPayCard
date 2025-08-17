@@ -36,7 +36,7 @@ describe('EmbersCore API Surface', () => {
       childHeight: 100,
       feeHeight: 99,
       kWindow: 1,
-      fetchTx: async (txid: string) => 'mockHex'
+      fetchTx: async () => 'mockHex'
     };
 
     // Should return a Promise<bigint>

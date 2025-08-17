@@ -17,12 +17,13 @@ export const SEMVER = '1.0.0';
  * @param opts - Validation options including network, block heights, and fetch function
  * @returns Amount paid to creator (0n if validation fails)
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function verifyPayment(
-  txHexOrId: string,
-  creatorAddr: string,
-  minFee: bigint,
-  nftId: string,
-  opts: {
+  _txHexOrId: string,
+  _creatorAddr: string,
+  _minFee: bigint,
+  _nftId: string,
+  _opts: {
     currentBlock: number;
     network: 'regtest' | 'signet' | 'testnet' | 'mainnet';
     childHeight?: number;

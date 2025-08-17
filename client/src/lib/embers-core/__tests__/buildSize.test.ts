@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { existsSync, readFileSync, statSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { gzipSync } from 'zlib';
 import { execSync } from 'child_process';
@@ -20,7 +20,7 @@ describe('EmbersCore Build Size', () => {
         cwd: join(__dirname, '../../../..'), // client root
         stdio: 'ignore'
       });
-    } catch (error) {
+    } catch {
       // Build command doesn't exist yet, which is expected in RED phase
     }
   });

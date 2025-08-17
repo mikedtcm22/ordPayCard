@@ -3,10 +3,16 @@
  * Fetches and loads the latest child inscription containing the library
  */
 
+interface EmbersCore {
+  SEMVER: string;
+  verifyPayment: (...args: unknown[]) => Promise<bigint>;
+  dedupe: (txids: string[]) => string[];
+}
+
 interface LoaderOptions {
   parentId: string;
   baseUrl?: string;
-  onLoad?: (embersCore: any) => void;
+  onLoad?: (embersCore: EmbersCore) => void;
 }
 
 let loadingPromise: Promise<void> | null = null;
@@ -24,9 +30,9 @@ export async function loadEmbersCore(options: LoaderOptions): Promise<void> {
   }
   
   // Check if already loaded
-  if (typeof window !== 'undefined' && (window as any).EmbersCore) {
+  if (typeof window !== 'undefined' && (window as Window & { EmbersCore?: EmbersCore }).EmbersCore) {
     if (onLoad) {
-      onLoad((window as any).EmbersCore);
+      onLoad((window as Window & { EmbersCore: EmbersCore }).EmbersCore);
     }
     return;
   }
@@ -43,7 +49,7 @@ export async function loadEmbersCore(options: LoaderOptions): Promise<void> {
 async function loadEmbersCoreInternal(
   parentId: string,
   baseUrl: string,
-  onLoad?: (embersCore: any) => void
+  onLoad?: (embersCore: EmbersCore) => void
 ): Promise<void> {
   try {
     // Fetch children of the parent inscription
@@ -63,12 +69,16 @@ async function loadEmbersCoreInternal(
     }
     
     // Find the latest child by height
-    const latestChild = children.reduce((latest: any, child: any) => {
+    interface Child {
+      id: string;
+      height: number;
+    }
+    const latestChild = children.reduce((latest: Child | null, child: Child) => {
       if (!latest || child.height > latest.height) {
         return child;
       }
       return latest;
-    }, null);
+    }, null as Child | null);
     
     if (!latestChild) {
       console.warn('Could not determine latest child');
@@ -93,8 +103,8 @@ async function loadEmbersCoreInternal(
       document.body.appendChild(script);
       
       // Call onLoad callback if provided
-      if (onLoad && (window as any).EmbersCore) {
-        onLoad((window as any).EmbersCore);
+      if (onLoad && (window as Window & { EmbersCore?: EmbersCore }).EmbersCore) {
+        onLoad((window as Window & { EmbersCore: EmbersCore }).EmbersCore);
       }
     }
   } catch (error) {
