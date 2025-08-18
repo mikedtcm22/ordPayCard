@@ -21,6 +21,9 @@ jobs:
   size-check:
     name: Check Bundle Size
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     
     steps:
       - name: Checkout code
@@ -77,34 +80,45 @@ jobs:
             const path = require('path');
             const zlib = require('zlib');
             
-            // Read the bundle
-            const bundlePath = path.join(process.env.GITHUB_WORKSPACE, 'client/src/lib/dist/embers-core/embers-core.min.js');
-            const bundleContent = fs.readFileSync(bundlePath, 'utf-8');
-            
-            // Calculate sizes
-            const rawSize = Buffer.byteLength(bundleContent);
-            const gzippedSize = zlib.gzipSync(bundleContent).length;
-            
-            // Format sizes
-            const rawSizeKB = (rawSize / 1024).toFixed(2);
-            const gzippedSizeKB = (gzippedSize / 1024).toFixed(2);
-            
-            // Create comment
-            const comment = `## 📦 Bundle Size Report
-            
-            | Metric | Size |
-            |--------|------|
-            | Raw | ${rawSizeKB} KB |
-            | Gzipped | ${gzippedSizeKB} KB |
-            | Limit | 8.00 KB |
-            
-            ${gzippedSize > 8192 ? '❌ **Bundle exceeds size limit!**' : '✅ Bundle size is within limit'}
-            `;
-            
-            // Post comment
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+            try {
+              // Read the bundle
+              const bundlePath = path.join(process.env.GITHUB_WORKSPACE, 'client/src/lib/dist/embers-core/embers-core.min.js');
+              const bundleContent = fs.readFileSync(bundlePath, 'utf-8');
+              
+              // Calculate sizes
+              const rawSize = Buffer.byteLength(bundleContent);
+              const gzippedSize = zlib.gzipSync(bundleContent).length;
+              
+              // Format sizes
+              const rawSizeKB = (rawSize / 1024).toFixed(2);
+              const gzippedSizeKB = (gzippedSize / 1024).toFixed(2);
+              
+              // Create comment
+              const comment = `## 📦 Bundle Size Report
+              
+              | Metric | Size |
+              |--------|------|
+              | Raw | ${rawSizeKB} KB |
+              | Gzipped | ${gzippedSizeKB} KB |
+              | Limit | 8.00 KB |
+              
+              ${gzippedSize > 8192 ? '❌ **Bundle exceeds size limit!**' : '✅ Bundle size is within limit'}
+              `;
+              
+              // Post comment (only works on PR events)
+              if (context.issue && context.issue.number) {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: comment
+                });
+                console.log('Posted size report comment to PR');
+              } else {
+                console.log('Not a PR event, skipping comment');
+                console.log('Size report:', comment);
+              }
+            } catch (error) {
+              console.error('Error posting comment:', error);
+              // Don't fail the workflow if commenting fails
+            }
