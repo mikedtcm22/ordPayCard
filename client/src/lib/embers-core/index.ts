@@ -3,30 +3,29 @@
  * Provides parser utilities for verifying registration payments and deduplication
  */
 
-// This will be replaced at build time with the actual version from package.json
-const PKG_VERSION = '__VERSION__';
-const BUILD_TIMESTAMP = '__TIMESTAMP__';
-const GIT_HASH = '__GIT_HASH__';
+// Declare build-time constants
+declare const __VERSION__: string | undefined;
+declare const __TIMESTAMP__: string | undefined;
+declare const __GIT_HASH__: string | undefined;
+
+// These will be replaced at build time by Vite's define plugin
+const PKG_VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : '0.0.0';
+const BUILD_TIMESTAMP = typeof __TIMESTAMP__ !== 'undefined' ? __TIMESTAMP__ : new Date().toISOString();
+const GIT_HASH = typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : 'development';
 
 /**
  * Semantic version of the EmbersCore library
  */
-export const SEMVER = PKG_VERSION === '__VERSION__' ? '0.0.0' : PKG_VERSION;
+export const SEMVER = PKG_VERSION;
 
 /**
- * Get build information including version, timestamp, and git hash
+ * Build information metadata exported as an immutable object
  */
-export function getBuildInfo(): BuildInfo {
-  return {
-    version: SEMVER,
-    timestamp: BUILD_TIMESTAMP === '__TIMESTAMP__' 
-      ? new Date().toISOString() 
-      : BUILD_TIMESTAMP,
-    gitHash: GIT_HASH === '__GIT_HASH__' 
-      ? 'development' 
-      : GIT_HASH
-  };
-}
+export const buildInfo: BuildInfo = Object.freeze({
+  version: PKG_VERSION,
+  timestamp: BUILD_TIMESTAMP,
+  gitHash: GIT_HASH
+});
 
 /**
  * Branded type for Bitcoin network names

@@ -7,6 +7,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // Read version from package.json
 const packageJson = JSON.parse(
@@ -21,12 +22,26 @@ try {
   // Ignore git errors in CI or non-git environments
 }
 
+// Check if we should analyze the bundle
+const isAnalyze = process.env.ANALYZE === 'true';
+
 export default defineConfig({
   define: {
     '__VERSION__': JSON.stringify(packageJson.version),
     '__TIMESTAMP__': JSON.stringify(new Date().toISOString()),
     '__GIT_HASH__': JSON.stringify(gitHash)
   },
+  plugins: [
+    // Only add visualizer when ANALYZE is set
+    isAnalyze && visualizer({
+      filename: 'src/lib/dist/embers-core/stats.html',
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+      template: 'treemap', // or 'sunburst', 'network', 'raw-data', 'list'
+      title: 'Embers Core Bundle Analysis'
+    })
+  ].filter(Boolean),
   build: {
     lib: {
       entry: resolve(__dirname, 'src/lib/embers-core/index.ts'),

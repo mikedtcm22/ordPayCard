@@ -1,0 +1,12 @@
+{
+  "name": "embers-core",
+  "path": "src/lib/dist/embers-core/embers-core.min.js",
+  "maxSize": "8KB",
+  "warnSize": "6KB",
+  "compression": "gzip",
+  "description": "Size budget for embers-core IIFE bundle used in inscriptions",
+  "thresholds": {
+    "error": 8192,
+    "warning": 6144
+  }
+}

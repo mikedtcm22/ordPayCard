@@ -1,0 +1,109 @@
+name: Embers Core Size Check
+
+on:
+  pull_request:
+    paths:
+      - 'client/src/lib/embers-core/**'
+      - 'client/vite.config.embers.ts'
+      - 'client/embers-core.size-budget.json'
+      - '.github/workflows/embers-core-size.yml'
+  push:
+    branches:
+      - main
+      - embers_core_v1
+      - pre_core_refactors
+    paths:
+      - 'client/src/lib/embers-core/**'
+      - 'client/vite.config.embers.ts'
+      - 'client/embers-core.size-budget.json'
+
+jobs:
+  size-check:
+    name: Check Bundle Size
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'client/package-lock.json'
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            client/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('client/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: |
+          cd client
+          npm ci
+
+      - name: Build embers-core
+        run: |
+          cd client
+          npm run build:embers-core
+
+      - name: Check bundle size
+        id: size-check
+        run: |
+          cd client
+          npm run postbuild:embers-core
+
+      - name: Upload size report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-report
+          path: client/src/lib/dist/embers-core/embers-core.min.js
+          retention-days: 7
+
+      - name: Comment PR with size info
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const zlib = require('zlib');
+            
+            // Read the bundle
+            const bundlePath = path.join(process.env.GITHUB_WORKSPACE, 'client/src/lib/dist/embers-core/embers-core.min.js');
+            const bundleContent = fs.readFileSync(bundlePath, 'utf-8');
+            
+            // Calculate sizes
+            const rawSize = Buffer.byteLength(bundleContent);
+            const gzippedSize = zlib.gzipSync(bundleContent).length;
+            
+            // Format sizes
+            const rawSizeKB = (rawSize / 1024).toFixed(2);
+            const gzippedSizeKB = (gzippedSize / 1024).toFixed(2);
+            
+            // Create comment
+            const comment = `## 📦 Bundle Size Report
+            
+            | Metric | Size |
+            |--------|------|
+            | Raw | ${rawSizeKB} KB |
+            | Gzipped | ${gzippedSizeKB} KB |
+            | Limit | 8.00 KB |
+            
+            ${gzippedSize > 8192 ? '❌ **Bundle exceeds size limit!**' : '✅ Bundle size is within limit'}
+            `;
+            
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
