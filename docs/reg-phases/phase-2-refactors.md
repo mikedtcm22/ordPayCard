@@ -2,7 +2,7 @@
 
 This document consolidates refactoring items identified during Phase 2 implementation (Tracks A–C) and organizes them into small, verifiable tasks with clear success criteria. All work should occur on branch `pre_core_refactors`.
 
-**Progress**: 4/4 themes completed ✅ (B2 ✅, B3 ✅, C1 ✅, C2 ✅)
+**Progress**: 6/7 themes completed ✅ (B2 ✅, B3 ✅, C1 ✅, C2 ✅, D2 ✅, D3 ✅, D1 pending)
 
 #### Scope
 - Focus: Hardening, structure, and consistency improvements discovered after completing Tracks A (Parser), B (Template), and C (Backend Status API).
@@ -85,15 +85,15 @@ The items below are prioritized code tasks for the Executor. Documentation/proce
   - ✅ Contract test validates API shape; build exports `SEMVER` from `package.json`
   - ✅ Parity tests run the same fixtures against server and client and assert identical outputs
 
-#### D2 — Build Configuration, Size Budget, and CI (Code)
+#### D2 — Build Configuration, Size Budget, and CI (Code) ✅
 - Tasks:
-  - [ ] Add `postbuild:embers-core` script that reports gzipped size and exits non-zero over 8KB
-  - [ ] Add size budget manifest `embers-core.size-budget.json` with thresholds; enforce in CI
-  - [ ] Add CI workflow to run build + size checks on every PR and fail on regression
-  - [ ] Add `analyze:embers-core` script using `rollup-plugin-visualizer` to emit an artifact (e.g., `stats.html`)
-  - [ ] Inject build metadata (version, timestamp, git hash) into the bundle and expose via a stable export
-  - [ ] Add browser-like integration tests that load the built IIFE via a simulated `<script>` in jsdom/happy-dom
-  - [ ] Verify the bundle works in an inscription-like environment (no network; restricted globals)
+  - [x] Add `postbuild:embers-core` script that reports gzipped size and exits non-zero over 8KB
+  - [x] Add size budget manifest `embers-core.size-budget.json` with thresholds; enforce in CI
+  - [x] Add CI workflow to run build + size checks on every PR and fail on regression
+  - [x] Add `analyze:embers-core` script using `rollup-plugin-visualizer` to emit an artifact (e.g., `stats.html`)
+  - [x] Inject build metadata (version, timestamp, git hash) into the bundle and expose via a stable export
+  - [x] Add browser-like integration tests that load the built IIFE via a simulated `<script>` in jsdom/happy-dom
+  - [x] Verify the bundle works in an inscription-like environment (no network; restricted globals)
 - Success criteria:
   - ✅ Local `npm run build` prints gzipped size and enforces ≤ 8KB
   - ✅ CI fails when size exceeds budget and passes otherwise
@@ -101,15 +101,15 @@ The items below are prioritized code tasks for the Executor. Documentation/proce
   - ✅ An exported `buildInfo` object contains `{ version, timestamp, gitHash }` and is covered by tests
   - ✅ Integration tests import and execute the built IIFE without throwing
 
-#### D3 — Loader Snippet Resilience and Safety (Code)
+#### D3 — Loader Snippet Resilience and Safety (Code) ✅
 - Tasks:
-  - [ ] Optional checksum verification using `SubtleCrypto` when `expectedHash` is provided; reject mismatches
-  - [ ] Local caching of loaded scripts keyed by `{ parentId, height }` with invalidation strategy
-  - [ ] Exponential backoff retry with a bounded number of attempts and jitter
-  - [ ] Fallback to last known good cached version when latest fails
-  - [ ] Strict input validation for inscription IDs before fetching
-  - [ ] Batch and parallel fetching for children metadata with bounded concurrency
-  - [ ] Support loading a specific version by height or exact ID, in addition to "latest"
+  - [x] Optional checksum verification using `SubtleCrypto` when `expectedHash` is provided; reject mismatches
+  - [x] Local caching of loaded scripts keyed by `{ parentId, height }` with invalidation strategy
+  - [x] Exponential backoff retry with a bounded number of attempts and jitter
+  - [x] Fallback to last known good cached version when latest fails
+  - [x] Strict input validation for inscription IDs before fetching
+  - [x] Batch and parallel fetching for children metadata with bounded concurrency
+  - [x] Support loading a specific version by height or exact ID, in addition to "latest"
 - Success criteria:
   - ✅ Unit tests verify hash pass/fail paths using deterministic fixtures
   - ✅ Cache hit/miss behavior verified with fake timers; invalidation rules covered
