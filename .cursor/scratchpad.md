@@ -58,6 +58,43 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 #### **Track E: Tooling & Examples**
 - [ ] E1: `bitcoin-cli` OP_RETURN examples
 - [ ] E2: Wallet troubleshooting guide
+  
+#### Track E: Tooling & Examples — Planner Breakdown
+
+##### Micro-task E1 — `bitcoin-cli` OP_RETURN examples
+- **Goal**: Provide canonical, copy-pasteable CLI commands to construct a fee transaction embedding OP_RETURN data `<NFT_ID>|<EXPIRY_BLOCK>` that pays the creator address, for regtest/signet/testnet/mainnet.
+- **Scope**:
+  - End-to-end raw tx flow with `fundrawtransaction`/`walletcreatefundedpsbt` and `OP_RETURN` output.
+  - Canonicalize OP_RETURN encoding and parameter placeholders; include expiry rationale and validation notes.
+  - Network-specific notes (fee rates, address formats); troubleshooting section for common errors.
+- **Deliverables**:
+  - `docs/testing/opreturn-bitcoin-cli-examples.md` with sections: Overview, Prereqs, Regtest walk-through, Signet/Testnet notes, Mainnet cautions, Troubleshooting.
+  - Tests (RED→GREEN): `server/src/__tests__/docs.e1.examples.test.ts` validates file presence and that examples include `<NFT_ID>` and `<EXPIRY_BLOCK>` placeholders and an OP_RETURN output.
+- **TDD**:
+  - RED: Failing Jest test asserting doc exists and contains required markers and a code block with `OP_RETURN`.
+  - GREEN: Author the doc with minimal, accurate examples that satisfy the test.
+- **Success criteria**:
+  - New doc is discoverable and passes tests; examples execute on regtest as written (with placeholder replacement).
+  - Explicit cross-links to parser rules and status API behavior.
+- **Risks**: Wallet/CLI version differences; mitigate via version notes and alternatives section.
+
+##### Micro-task E2 — Wallet troubleshooting guide
+- **Goal**: Help users succeed when their wallet cannot add OP_RETURN or deviates from required encoding by providing clear alternatives and verification steps.
+- **Scope**:
+  - Supported wallet matrix and OP_RETURN capability notes.
+  - Alternatives: raw PSBT/CLI builder path (link to E1), manual verification steps to confirm OP_RETURN and payment amount.
+  - Common errors and fixes; FAQs.
+- **Deliverables**:
+  - `docs/testing/wallet-troubleshooting.md` with sections: Supported wallets, Alternatives, Raw builder flow, Verification, FAQ.
+  - Tests (RED→GREEN): `server/src/__tests__/docs.e2.troubleshooting.test.ts` checks presence and section headings listed above.
+- **TDD**:
+  - RED: Failing Jest test asserting doc exists and includes required section headings.
+  - GREEN: Author the guide minimally to satisfy tests; iterate as needed.
+- **Success criteria**:
+  - Users can complete a registration by following either a supported wallet path or the raw builder fallback.
+  - Guide cross-links to E1 examples and status API debug fields to validate outcomes.
+- **Dependencies**: E1 examples referenced by E2; reuse network setup from existing SIGNET/TESTING docs.
+- **Risks**: Wallet UIs change; mitigate by focusing on principles and CLI fallback.
 
 ## Project Status Board
 

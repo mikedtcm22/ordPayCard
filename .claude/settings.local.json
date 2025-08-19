@@ -48,7 +48,11 @@
       "Bash(git commit:*)",
       "Bash(npm run build:embers-core:*)",
       "Bash(git push:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run postbuild:embers-core:*)",
+      "Bash(npm run analyze:embers-core:*)",
+      "Bash(git rev-parse:*)"
     ],
     "deny": []
   }
