@@ -276,6 +276,16 @@ These are deliberately deferred and not part of the current code task plan. Keep
 - **Memory Management**: Consider implementing cache size limits and automatic cleanup for long-running processes
 - **Cache Warming**: Add optional cache pre-warming for frequently accessed NFT IDs to improve initial response times
 
+### REFACTOR Notes for E1 - bitcoin-cli OP_RETURN Examples
+- **Example Variety**: Add more network-specific examples with actual addresses for each network type
+- **Script Automation**: Consider adding bash script examples that automate the entire flow
+- **Error Recovery**: Add examples of RBF (Replace-By-Fee) for stuck transactions
+- **PSBT Workflow**: Expand PSBT examples with multi-sig and hardware wallet scenarios
+- **Validation Tools**: Add examples using `bitcoin-cli validateaddress` and transaction simulation
+- **Size Optimization**: Document OP_RETURN size limits (80 bytes standard, up to 83 bytes with OP_PUSHDATA)
+- **Cross-Platform**: Add Windows PowerShell equivalents for hex encoding commands
+- **Integration Examples**: Show how to integrate with popular wallet libraries (bitcoinjs-lib, etc.)
+
 ## Next Steps
 
 1. **Backend API**: Track C completed (C1-C2)
