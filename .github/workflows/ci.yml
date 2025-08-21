@@ -28,6 +28,8 @@ jobs:
         run: npm run type-check
       - name: Test
         run: npm test -- --ci --reporters=default --reporters=github-actions
+        env:
+          BITCOIN_NETWORK: testnet
 
   client:
     runs-on: ubuntu-latest
