@@ -434,6 +434,32 @@ These are deliberately deferred and not part of the current code task plan. Keep
    - Parallelize independent tests
    - Skip blockchain sync check if recently verified
 
+### Completed S3.2: Status API Signet Tests
+- Created helper functions for inscription simulation
+- Implemented real Signet payment transaction creation
+- Successfully tested OP_RETURN data embedding
+
+### Refactor opportunities identified for S3.2:
+1. **Real inscription integration**
+   - Once ord is installed on Signet, replace mock inscriptions with real ones
+   - Implement actual parent/child inscription creation
+   - Add full status API validation with real data
+
+2. **Test data cleanup**
+   - Add cleanup after tests to avoid polluting wallet
+   - Track created transactions for potential rollback
+   - Implement test isolation
+
+3. **Retry logic for network operations**
+   - Add retry wrapper for bitcoin-cli commands
+   - Handle network timeouts gracefully
+   - Implement exponential backoff
+
+4. **Configuration improvements**
+   - Make test wallet name configurable
+   - Add option to use existing inscriptions for testing
+   - Support different fee rates for test transactions
+
 ## Next Steps
 
 1. **Backend API**: Track C completed (C1-C2)
