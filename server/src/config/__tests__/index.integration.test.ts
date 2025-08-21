@@ -89,7 +89,7 @@ describe('ConfigManager network integration', () => {
     expect(() => {
       resetConfig();
       getConfig();
-    }).toThrow('Invalid Signet address');
+    }).toThrow('Invalid signet address');
   });
 
   it('should apply environment variable overrides', () => {
