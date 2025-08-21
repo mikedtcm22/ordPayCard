@@ -12,7 +12,7 @@ import {
   fetchRegistrationStatus,
   renderTemplate,
   getCurrentBlockHeight
-} from './template-utils';
+} from './template-utils.helper';
 
 // Skip these tests in CI environment as they require local Signet node
 const describeSkipCI = process.env['CI'] ? describe.skip : describe;

@@ -7,7 +7,7 @@ import {
   inscribeOnSignet, 
   createSignetPayment,
   getCurrentBlockHeight
-} from './inscription-helpers';
+} from './inscription-helpers.helper';
 
 // Skip these tests in CI environment as they require local Signet node
 const describeSkipCI = process.env['CI'] ? describe.skip : describe;

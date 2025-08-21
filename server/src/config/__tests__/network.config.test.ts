@@ -37,7 +37,29 @@ describe('Network configuration', () => {
       ordUrl: 'http://localhost:8080'
     };
     
-    expect(() => validateNetworkConfig(config)).toThrow('Invalid Signet address');
+    expect(() => validateNetworkConfig(config)).toThrow('Invalid signet address');
+  });
+
+  it('should load testnet configuration from environment', () => {
+    process.env['BITCOIN_NETWORK'] = 'testnet';
+    process.env['TESTNET_ORD_URL'] = 'http://localhost:8080';
+    process.env['TESTNET_CREATOR_ADDRESS'] = 'tb1qtestnet';
+    
+    const config = loadNetworkConfig();
+    
+    expect(config.network).toBe('testnet');
+    expect(config.ordUrl).toBe('http://localhost:8080');
+    expect(config.creatorAddress).toBe('tb1qtestnet');
+  });
+
+  it('should validate testnet addresses', () => {
+    const config: NetworkConfig = { 
+      network: 'testnet', 
+      creatorAddress: 'bc1qmainnet', // mainnet address on testnet
+      ordUrl: 'http://localhost:8080'
+    };
+    
+    expect(() => validateNetworkConfig(config)).toThrow('Invalid testnet address');
   });
 
   it('should load regtest configuration for backward compatibility', () => {

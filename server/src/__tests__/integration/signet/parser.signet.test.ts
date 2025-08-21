@@ -3,7 +3,7 @@
  * Tests verify that the parser can handle actual Signet transactions with OP_RETURN data
  */
 
-import { waitForSignetSync, createSignetOpReturnTx, fetchSignetTx, createSignetPaymentTx } from './utils';
+import { waitForSignetSync, createSignetOpReturnTx, fetchSignetTx, createSignetPaymentTx } from './utils.helper';
 import { parseOpReturn } from '../../../services/registration/parser/opReturn';
 import { sumOutputsToAddress } from '../../../services/registration/parser/sumToCreator';
 
