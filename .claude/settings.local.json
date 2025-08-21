@@ -62,7 +62,10 @@
       "Bash(CI=true npm test -- --testPathPattern=\"(parser|status|e2e).signet.test\")",
       "Bash(BITCOIN_NETWORK=testnet CI=true npm test -- src/services/__tests__/bitcoin.test.ts)",
       "Bash(CI=true npm test -- src/config/__tests__/index.integration.test.ts)",
-      "Bash(CI=true BITCOIN_NETWORK=testnet npm test)"
+      "Bash(CI=true BITCOIN_NETWORK=testnet npm test)",
+      "Bash(./scripts/signet-test/__tests__/generate-test-tx.test.sh:*)",
+      "Bash(./scripts/signet-test/__tests__/inscribe-test-parent.test.sh:*)",
+      "Bash(./scripts/signet-test/__tests__/create-test-receipt.test.sh:*)"
     ],
     "deny": []
   }
