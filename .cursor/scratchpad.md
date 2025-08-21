@@ -406,6 +406,34 @@ These are deliberately deferred and not part of the current code task plan. Keep
 
 5. **Integration tests**: Create end-to-end integration tests that use real network data instead of fixtures.
 
+## Phase 2 Signet Upgrades - S3 Track Progress
+
+### Completed S3.1: Signet Parser Integration Tests
+- Created real Signet transaction tests with OP_RETURN data
+- Implemented utilities for creating and fetching Signet transactions
+- Successfully parsed real blockchain data with actual transaction fees
+
+### Refactor opportunities identified for S3.1:
+1. **Extract test utilities to shared module**
+   - Consider creating a shared test utils package
+   - Reusable functions for transaction creation
+   - Common fixtures for different networks
+
+2. **Add transaction caching**
+   - Cache created transactions to speed up test runs
+   - Avoid recreating identical test data
+   - Implement TTL for cache entries
+
+3. **Improve error handling**
+   - Add retry logic for network timeouts
+   - Better error messages for debugging
+   - Handle wallet insufficient funds gracefully
+
+4. **Optimize test performance**
+   - Batch transaction creation where possible
+   - Parallelize independent tests
+   - Skip blockchain sync check if recently verified
+
 ## Next Steps
 
 1. **Backend API**: Track C completed (C1-C2)
