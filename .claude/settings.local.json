@@ -52,7 +52,8 @@
       "Bash(npm run test:*)",
       "Bash(npm run postbuild:embers-core:*)",
       "Bash(npm run analyze:embers-core:*)",
-      "Bash(git rev-parse:*)"
+      "Bash(git rev-parse:*)",
+      "Bash(./scripts/signet-ensure.sh:*)"
     ],
     "deny": []
   }

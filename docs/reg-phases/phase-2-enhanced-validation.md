@@ -328,13 +328,16 @@ Micro-task E1: `bitcoin-cli` OP_RETURN examples ✅ COMPLETED
   - Add PSBT examples with annotate steps (included in GREEN phase)
   - Future enhancements documented in scratchpad: script automation, RBF examples, cross-platform commands
 
-Micro-task E2: Wallet troubleshooting guide
-- RED
+Micro-task E2: Wallet troubleshooting guide ✅ COMPLETED
+- RED ✅
   - Docs test asserts required sections present (supported wallets, alternatives, raw builder flow).
-- GREEN
+  - Test: `server/src/__tests__/docs.e2.troubleshooting.test.ts` (8 test cases verifying all sections)
+- GREEN ✅
   - Author guide with clear steps and fallbacks.
-- REFACTOR (planning)
+  - Documentation: `docs/testing/wallet-troubleshooting.md` with wallet matrix, alternatives, verification steps, FAQ
+- REFACTOR (planning) ✅
   - Add screenshots later.
+  - Future enhancements documented in scratchpad: video tutorials, hardware wallets, mobile support
 
 ----
 

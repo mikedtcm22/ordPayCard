@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Start ord server with Signet configuration
+# Start ord server with Signet configuration (YAML-driven)
 
 set -e
 
@@ -11,9 +11,16 @@ CONFIG_FILE="$PROJECT_ROOT/configs/ord-signet.yaml"
 echo "Starting ord server with Signet configuration..."
 echo "Config file: $CONFIG_FILE"
 
-# Check if ord server is already running
-if pgrep -f "ord.*server" > /dev/null; then
-    echo "⚠️  ord server is already running. Stop it first with ./ord-signet-stop.sh"
+# Determine HTTP port from YAML (fallback to 8080)
+ORD_HTTP_PORT=$(grep -E '^\s*server_http_port:' "$CONFIG_FILE" | awk -F': ' '{print $2}' | tr -d '"' | tr -d "'")
+if [ -z "$ORD_HTTP_PORT" ] || [ "$ORD_HTTP_PORT" = "null" ]; then
+    ORD_HTTP_PORT=8080
+fi
+ORD_BASE_URL="http://localhost:$ORD_HTTP_PORT"
+
+# Check if ord server is already running on configured port
+if curl -s "$ORD_BASE_URL/status" > /dev/null 2>&1 || pgrep -f "ord.*server" > /dev/null; then
+    echo "⚠️  ord server appears to be already running on $ORD_BASE_URL. Stop it first with ./ord-signet-stop.sh"
     exit 1
 fi
 
@@ -23,24 +30,19 @@ if ! bitcoin-cli -rpcport=38332 -rpcuser=ordtest -rpcpassword=ordtest2024 getblo
     exit 1
 fi
 
-# Create ord data directory if it doesn't exist
-ORD_DATA_DIR="/Users/michaelchristopher/.local/share/ord/signet"
+# Create ord data directory if it doesn't exist (respect YAML path if changed)
+ORD_DATA_DIR=$(grep -E '^\s*data_dir:' "$CONFIG_FILE" | awk -F': ' '{print $2}' | tr -d '"' | tr -d "'")
+if [ -z "$ORD_DATA_DIR" ] || [ "$ORD_DATA_DIR" = "null" ]; then
+    ORD_DATA_DIR="/Users/michaelchristopher/.local/share/ord/signet"
+fi
 mkdir -p "$ORD_DATA_DIR"
 
 echo "⏳ Starting ord indexing and server..."
 
-# Start ord server in background with signet
+# Start ord server in background with YAML config
 nohup ord \
-    --bitcoin-rpc-url http://127.0.0.1:38332 \
-    --bitcoin-rpc-username ordtest \
-    --bitcoin-rpc-password ordtest2024 \
-    --chain signet \
-    --data-dir "$ORD_DATA_DIR" \
-    --enable-json-api \
-    --index-runes \
-    --index-sats \
+    --config "$CONFIG_FILE" \
     server \
-    --http-port 8080 \
     > "$PROJECT_ROOT/logs/ord-signet.log" 2>&1 &
 
 ORD_PID=$!
@@ -54,16 +56,16 @@ sleep 5
 
 # Check if ord server is responding
 for i in {1..30}; do
-    if curl -s http://localhost:8080 > /dev/null 2>&1; then
+    if curl -s "$ORD_BASE_URL" > /dev/null 2>&1; then
         echo "✅ ord server started successfully!"
         echo ""
-        echo "Access ord at: http://localhost:8080"
+        echo "Access ord at: $ORD_BASE_URL"
         echo "Logs are at: $PROJECT_ROOT/logs/ord-signet.log"
         echo ""
         echo "Useful endpoints:"
-        echo "  - Inscriptions: http://localhost:8080/inscriptions"
-        echo "  - Blocks: http://localhost:8080/blocks"
-        echo "  - Status: http://localhost:8080/status"
+        echo "  - Inscriptions: $ORD_BASE_URL/inscriptions"
+        echo "  - Blocks: $ORD_BASE_URL/blocks"
+        echo "  - Status: $ORD_BASE_URL/status"
         exit 0
     fi
     echo -n "."

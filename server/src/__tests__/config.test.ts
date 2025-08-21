@@ -130,17 +130,17 @@ describe('Centralized Configuration Module', () => {
     });
 
     it('should adjust endpoints based on Bitcoin network', () => {
-      process.env['BITCOIN_NETWORK'] = 'mainnet';
+      process.env['BITCOIN_NETWORK'] = 'signet';
       resetConfig();
       
-      const mainnetConfig = getConfig();
-      expect(mainnetConfig.network.bitcoin).toBe('mainnet');
+      const signetConfig = getConfig();
+      expect(signetConfig.network.bitcoin).toBe('signet');
       
-      process.env['BITCOIN_NETWORK'] = 'testnet';
+      process.env['BITCOIN_NETWORK'] = 'regtest';
       resetConfig();
       
-      const testnetConfig = getConfig();
-      expect(testnetConfig.network.bitcoin).toBe('testnet');
+      const regtestConfig = getConfig();
+      expect(regtestConfig.network.bitcoin).toBe('regtest');
     });
   });
 
@@ -211,7 +211,7 @@ describe('Centralized Configuration Module', () => {
       
       expect(() => {
         resetConfig();
-      }).toThrow('Invalid Bitcoin network');
+      }).toThrow('Unsupported network: invalid-network');
     });
   });
 

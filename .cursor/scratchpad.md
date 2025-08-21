@@ -56,8 +56,8 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - [ ] D3: Loader snippet to resolve latest child by parent ID
 
 #### **Track E: Tooling & Examples**
-- [ ] E1: `bitcoin-cli` OP_RETURN examples
-- [ ] E2: Wallet troubleshooting guide
+- ✅ E1: `bitcoin-cli` OP_RETURN examples - `docs/testing/opreturn-bitcoin-cli-examples.md`
+- ✅ E2: Wallet troubleshooting guide - `docs/testing/wallet-troubleshooting.md`
   
 #### Track E: Tooling & Examples — Planner Breakdown
 
@@ -285,6 +285,126 @@ These are deliberately deferred and not part of the current code task plan. Keep
 - **Size Optimization**: Document OP_RETURN size limits (80 bytes standard, up to 83 bytes with OP_PUSHDATA)
 - **Cross-Platform**: Add Windows PowerShell equivalents for hex encoding commands
 - **Integration Examples**: Show how to integrate with popular wallet libraries (bitcoinjs-lib, etc.)
+
+### REFACTOR Notes for E2 - Wallet Troubleshooting Guide
+- **Wallet Updates**: Maintain current wallet compatibility as new versions release
+- **Video Tutorials**: Consider adding links to video walkthroughs for visual learners
+- **Script Repository**: Create companion repository with ready-to-use scripts
+- **Internationalization**: Translate guide to other languages for wider adoption
+- **Interactive Debugger**: Build web-based tool to decode and validate transactions
+- **Community Examples**: Add section for community-contributed solutions
+- **Hardware Wallets**: Expand coverage for Ledger, Trezor, and other hardware wallets
+- **Mobile Wallets**: Add mobile-specific troubleshooting for iOS/Android wallets
+- **API Integration**: Document programmatic registration via popular Bitcoin libraries
+
+## Phase 2 Signet Upgrades - S1 Track Refactor Notes
+
+### Completed S1.1: Environment Configuration Schema
+- Created network configuration module with type-safe network handling
+- Implemented basic address validation for signet vs regtest networks
+- Added .env.signet.example for configuration reference
+
+### Refactor opportunities identified for S1.1:
+1. **Address validation**: Current implementation uses simple prefix checking. Consider integrating a proper Bitcoin address validation library (e.g., bitcoinjs-lib) for more robust validation including checksum verification.
+
+2. **Configuration schema validation**: Consider using zod or joi for runtime schema validation to catch configuration errors early and provide better error messages.
+
+3. **Network constants**: Extract network-specific constants (prefixes, default ports) into a separate constants file for better maintainability.
+
+4. **Environment variable typing**: Consider creating a typed environment variable interface to avoid string indexing throughout the codebase.
+
+5. **Configuration factory pattern**: As we add more networks (testnet, mainnet), consider implementing a factory pattern for network-specific configurations.
+
+### Completed S1.2: Dynamic Endpoint Resolution
+- Created endpoint resolution function with network mapping
+- Implemented environment variable overrides for each endpoint
+- Handled URL normalization (trailing slashes, protocols, ports)
+
+### Refactor opportunities identified for S1.2:
+1. **Endpoint path constants**: Extract endpoint paths (`/r/metadata/`, `/r/children/`, etc.) to constants for maintainability.
+
+2. **Health checking**: Add endpoint health checking functionality to verify endpoints are accessible before use.
+
+3. **Endpoint validation**: Add URL validation to ensure provided base URLs are valid before constructing endpoints.
+
+4. **Network-specific endpoints**: Some networks might have different endpoint structures; consider network-specific endpoint patterns.
+
+5. **Caching**: Consider caching endpoint resolution results to avoid repeated string operations.
+
+6. **Timeout configuration**: Add per-endpoint timeout configuration for network calls.
+
+### Completed S1.3: Config Service Integration
+- Successfully integrated network-aware configuration into existing ConfigManager
+- Maintained backward compatibility with legacy environment variables
+- Added support for network-specific ord endpoints
+- Implemented address validation per network
+
+### Refactor opportunities identified for S1.3:
+1. **Factory pattern**: Consider implementing a factory pattern for creating network-specific configurations to reduce complexity in applyEnvironmentVariables.
+
+2. **Config validation middleware**: Extract validation logic into a separate middleware layer for better separation of concerns.
+
+3. **Environment variable schema**: Define a comprehensive schema for all environment variables with validation rules.
+
+4. **Config migration**: Add version tracking and migration support for config changes over time.
+
+5. **Config hot-reload**: Implement config hot-reload capability for development without server restart.
+
+6. **Network config abstraction**: Create a NetworkConfigProvider interface to abstract network-specific logic.
+
+## Phase 2 Signet Upgrades - S2 Track Progress
+
+### Completed S2.1: Network Parameter Support
+- Parser already had network parameter support in sumOutputsToAddress
+- Created comprehensive tests for network-specific address validation
+- Verified support for all networks including mainnet
+
+### Refactor opportunities identified for S2.1:
+1. **Backward compatibility**: Consider making network parameter optional with 'regtest' default for backward compatibility with existing code.
+
+2. **Network validation**: Add explicit network validation at function entry to fail fast with clear error messages.
+
+3. **Address format validation**: Current implementation relies on bitcoinjs-lib for address validation. Consider adding pre-validation for address prefixes per network.
+
+4. **Network type safety**: Consider using enum or const assertion for network types instead of string literals.
+
+5. **Error messages**: Enhance error messages to include which network was expected vs provided.
+
+### Completed S2.2: Signet Test Fixtures
+- Created comprehensive Signet transaction fixtures
+- Implemented fixtures for P2WPKH, P2TR, P2PKH output types
+- Added complex transaction fixtures (multi-input, multi-output)
+- Created edge case fixtures (minimum fee, expired, large OP_RETURN)
+
+### Refactor opportunities identified for S2.2:
+1. **Real transaction data**: Consider using actual Signet transaction data instead of generated fixtures for more realistic testing.
+
+2. **Fixture generation script**: Create a script to generate fixtures from real Signet network transactions automatically.
+
+3. **Network-specific fixtures**: Extend fixtures to support testnet and mainnet with their specific characteristics.
+
+4. **Fixture validation**: Add deeper validation of fixture structure (e.g., valid scripts, proper witness data).
+
+5. **Performance testing fixtures**: Add large transaction fixtures for performance testing of parser functions.
+
+6. **Deterministic generation**: Use deterministic seeds for all random values to ensure reproducible tests.
+
+### Completed S2.3: VerifyPayment Network Integration
+- Created comprehensive tests for verifyPayment with network support
+- Verified correct behavior across all networks (regtest, signet, testnet, mainnet)
+- Confirmed OP_RETURN validation with network awareness
+- Tested complex scenarios including multi-output and edge cases
+
+### Refactor opportunities identified for S2.3:
+1. **Test organization**: Consider splitting the large test file into smaller, focused test suites for better maintainability.
+
+2. **Fixture reuse**: Extract common transaction building utilities into a shared test helper module.
+
+3. **Error testing**: Add more tests for error conditions and edge cases (malformed transactions, invalid networks).
+
+4. **Performance benchmarks**: Add performance tests for verifyPayment with large transactions.
+
+5. **Integration tests**: Create end-to-end integration tests that use real network data instead of fixtures.
 
 ## Next Steps
 
