@@ -65,7 +65,9 @@
       "Bash(CI=true BITCOIN_NETWORK=testnet npm test)",
       "Bash(./scripts/signet-test/__tests__/generate-test-tx.test.sh:*)",
       "Bash(./scripts/signet-test/__tests__/inscribe-test-parent.test.sh:*)",
-      "Bash(./scripts/signet-test/__tests__/create-test-receipt.test.sh:*)"
+      "Bash(./scripts/signet-test/__tests__/create-test-receipt.test.sh:*)",
+      "Bash(./scripts/__tests__/test-signet.test.sh:*)",
+      "Bash(./scripts/signet-test/__tests__/check-prerequisites.test.sh:*)"
     ],
     "deny": []
   }

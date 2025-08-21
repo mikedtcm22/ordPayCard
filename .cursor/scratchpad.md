@@ -538,9 +538,34 @@ Real Signet blockchain integration tests implemented and passing.
 - S5.2: Deployment Script
 - S5.3: Template Integration
 
+## Phase 2 Signet Upgrades - S4 Track Progress
+
+### Completed S4.1: Test Data Generator Scripts
+- Created shell scripts for generating test transactions on Signet
+- Implemented generate-test-tx.sh for OP_RETURN and payment transactions
+- Implemented inscribe-test-parent.sh for parent template inscriptions
+- Implemented create-test-receipt.sh for registration receipt generation
+
+### Refactor opportunities identified for S4.1:
+1. **Bitcoin node integration**: Scripts currently simulate operations. When Bitcoin node is available, replace simulated calls with actual bitcoin-cli commands.
+
+2. **Error handling**: Add more robust error handling for bitcoin-cli failures, network issues, and invalid parameters.
+
+3. **Configuration file**: Consider adding a config file for default values (network, addresses, amounts) instead of hardcoding.
+
+4. **Validation utilities**: Add helper functions to validate addresses, amounts, and inscription IDs before processing.
+
+5. **Output formatting**: Standardize output format (JSON) for easier parsing by other scripts.
+
+6. **Logging**: Add detailed logging with timestamps for debugging and audit trails.
+
+7. **Docker support**: Create Docker wrapper scripts that handle bitcoin node setup automatically.
+
+8. **Cross-platform compatibility**: Test and ensure scripts work on Linux, macOS, and WSL.
+
 ## Next Steps
 
-1. **Track S4**: Implement test infrastructure and automation scripts
+1. **Track S4**: Continue with S4.2 (Automated Test Runner) and S4.3 (Network Health Monitoring)
 2. **Track S5**: Deploy Embers Core library to Signet
 3. **Documentation**: E1-E2 tooling and troubleshooting guides
 
