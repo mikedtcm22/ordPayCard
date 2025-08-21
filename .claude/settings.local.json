@@ -53,7 +53,13 @@
       "Bash(npm run postbuild:embers-core:*)",
       "Bash(npm run analyze:embers-core:*)",
       "Bash(git rev-parse:*)",
-      "Bash(./scripts/signet-ensure.sh:*)"
+      "Bash(./scripts/signet-ensure.sh:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(CI=true npm test -- --testPathPattern=\"signet.test\")",
+      "Bash(CI=true npm test -- --testPathPattern=\"parser.signet.test\" --verbose)",
+      "Bash(CI=true npm test -- src/__tests__/integration/signet/parser.signet.test.ts)",
+      "Bash(CI=true npm test -- --testPathPattern=\"(parser|status|e2e).signet.test\")"
     ],
     "deny": []
   }

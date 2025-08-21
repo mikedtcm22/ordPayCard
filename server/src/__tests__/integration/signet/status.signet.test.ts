@@ -9,7 +9,10 @@ import {
   getCurrentBlockHeight
 } from './inscription-helpers';
 
-describe('Status API Signet integration', () => {
+// Skip these tests in CI environment as they require local Signet node
+const describeSkipCI = process.env['CI'] ? describe.skip : describe;
+
+describeSkipCI('Status API Signet integration (requires local Signet node)', () => {
   it('should validate Signet payment transaction structure', async () => {
     // Create mock parent inscription ID
     const parentId = await inscribeOnSignet('parent.html');

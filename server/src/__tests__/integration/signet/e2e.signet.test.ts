@@ -14,7 +14,10 @@ import {
   getCurrentBlockHeight
 } from './template-utils';
 
-describe('E2E registration on Signet', () => {
+// Skip these tests in CI environment as they require local Signet node
+const describeSkipCI = process.env['CI'] ? describe.skip : describe;
+
+describeSkipCI('E2E registration on Signet (requires local Signet node)', () => {
   it('should complete full registration flow', async () => {
     // 1. Deploy parent template
     const parentHtml = generateTemplate('tb1qz3kmh8r2ezsqkhes255wrlslk027n0sf0luukq', 1000);

@@ -7,7 +7,10 @@ import { waitForSignetSync, createSignetOpReturnTx, fetchSignetTx, createSignetP
 import { parseOpReturn } from '../../../services/registration/parser/opReturn';
 import { sumOutputsToAddress } from '../../../services/registration/parser/sumToCreator';
 
-describe('Parser Signet integration', () => {
+// Skip these tests in CI environment as they require local Signet node
+const describeSkipCI = process.env['CI'] ? describe.skip : describe;
+
+describeSkipCI('Parser Signet integration (requires local Signet node)', () => {
   beforeAll(async () => {
     await waitForSignetSync();
   });
