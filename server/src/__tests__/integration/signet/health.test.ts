@@ -5,7 +5,10 @@
 
 import { checkSignetHealth } from '../../../utils/signet-health';
 
-describe('Signet health checks', () => {
+// Skip these tests in CI environment as they may attempt to connect to bitcoin-cli
+const describeSkipCI = process.env['CI'] ? describe.skip : describe;
+
+describeSkipCI('Signet health checks', () => {
   it('should verify ord is synced', async () => {
     const health = await checkSignetHealth();
     expect(health.ordSynced).toBeDefined();
