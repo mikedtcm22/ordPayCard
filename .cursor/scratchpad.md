@@ -216,6 +216,15 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 6. **Circuit breaker pattern**: Implement circuit breaker to prevent cascading failures when endpoints are down
 7. **Timeout escalation**: Different timeouts for different operations (fast fail for health, longer for data fetch)
 
+## REFACTOR Notes for S2.1 - Explicit network validation
+
+1. **Network type safety**: Consider using const assertion or enum for network types instead of string literals
+2. **Default network handling**: Consider making network optional with 'regtest' default for backward compatibility
+3. **Error categorization**: Create specific error classes (NetworkValidationError) for better error handling
+4. **Validation depth**: Add validation for network-specific configurations (e.g., port ranges)
+5. **Common typo detection**: Expand suggestions for common network name mistakes
+6. **Centralize network constants**: Extract all network-related constants to a single module
+
 ## Documentation/Process Tasks Queued (from D1–D3 Refactor Notes)
 
 These are deliberately deferred and not part of the current code task plan. Keep in queue for a later documentation-focused pass.
