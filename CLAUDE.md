@@ -203,3 +203,42 @@ Key variables to configure:
 - `JWT_SECRET`: For authentication
 - `ORDINALS_API_URL`: Ordinals API endpoint
 - `DATABASE_URL`: SQLite database path
+
+## Custom Commands
+
+### TDD Phase Execution Command
+
+**Usage**: `/tdd-phase <phase-doc-filename>`
+
+When this command is invoked with a phase planning document:
+
+1. **Read Phase Document**: Load the specified phase planning document to
+   understand the tasks
+2. **Initialize Todo List**: Create a todo list from all TDD tasks in the
+   document
+3. **Execute TDD Cycle**: For each task:
+   - Mark task as `in_progress`
+   - **RED Phase**: Write failing test(s) for the current feature
+   - **GREEN Phase**: Implement minimal code to pass the test(s)
+   - **REFACTOR Phase**: Clean up code without changing functionality
+   - Mark task as `completed` when all tests pass
+4. **Document Refactoring**: After completing each task:
+   - Add refactoring notes to `.cursor/scratchpad.md`
+   - Commit changes with descriptive message
+5. **Continue Until Done**: Repeat cycle for all tasks in the phase document
+6. **Final Summary**: Report completion status and any blockers
+
+**Example**:
+
+```
+User: /tdd-phase phase-1-foundation-setup.md
+Claude: I'll begin executing the TDD tasks from phase-1-foundation-setup.md. Let me start by reading the document and creating a todo list...
+```
+
+**Automatic Actions**:
+
+- Runs tests after each implementation
+- Commits working code after each GREEN phase
+- Documents refactoring decisions in scratchpad
+- Reports progress throughout execution
+- Handles test failures by staying in current phase until resolved
