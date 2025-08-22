@@ -627,11 +627,34 @@ All Test Infrastructure tasks have been successfully completed and pushed to Git
 
 8. **Build artifacts management**: Add cleanup of old build artifacts and versioning strategy.
 
-### S5.2: Deployment Script
-- Automate Embers Core inscription on Signet
-- Build script to inscribe as parent
-- Output inscription ID for configuration
-- Update environment variables
+### Completed S5.2: Deployment Script ✅
+- ✅ Created deploy-embers-core.sh script for automated inscription
+- ✅ Implemented dry-run mode for testing
+- ✅ Added network validation and build integration
+- ✅ Created verification script for deployment validation
+- ✅ Environment variable output and .env file updates
+- ✅ All tests passing
+
+#### Refactor opportunities for S5.2:
+1. **Real ord integration**: Replace mock inscription with actual ord CLI commands when Bitcoin node is available.
+
+2. **Rollback capability**: Implement actual rollback functionality to revert failed deployments.
+
+3. **Version management**: Add version tracking and history of deployed inscriptions per network.
+
+4. **Multi-wallet support**: Allow specifying different wallets for different networks.
+
+5. **Fee estimation**: Add fee estimation and user confirmation before inscription.
+
+6. **Batch deployment**: Support deploying to multiple networks in one command.
+
+7. **CI/CD integration**: Add GitHub Actions workflow for automated deployment on release.
+
+8. **Deployment verification**: Enhance verification to actually fetch and validate inscription content.
+
+9. **Error recovery**: Add retry logic and better error handling for network failures.
+
+10. **Deployment logs**: Create detailed deployment logs with timestamps and transaction IDs.
 
 ### S5.3: Template Integration
 - Update templates to use real Embers Core inscription

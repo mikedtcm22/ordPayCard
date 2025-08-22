@@ -69,7 +69,9 @@
       "Bash(./scripts/__tests__/test-signet.test.sh:*)",
       "Bash(./scripts/signet-test/__tests__/check-prerequisites.test.sh:*)",
       "Bash(CI=true npm test -- src/__tests__/integration/signet/health.test.ts)",
-      "Bash(CI=true npm test -- --testPathPattern=\"integration/signet\")"
+      "Bash(CI=true npm test -- --testPathPattern=\"integration/signet\")",
+      "Bash(/Users/michaelchristopher/repos/ordPayCard/scripts/signet-test/__tests__/deploy-embers.test.sh)",
+      "Bash(/Users/michaelchristopher/repos/ordPayCard/scripts/signet-test/verify-deployment.sh:*)"
     ],
     "deny": [],
     "additionalDirectories": [
