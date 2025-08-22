@@ -168,14 +168,26 @@ describe('verifyPayment (A3)', () => {
   });
 
   test('supports regtest network mapping end-to-end', async () => {
+    // Create regtest-specific address
+    const regtestKey = ECPair.makeRandom({ network: networks.regtest });
+    const regtestAddr = payments.p2wpkh({ 
+      pubkey: toBuffer(regtestKey.publicKey), 
+      network: networks.regtest 
+    }).address!;
+    
     const payload = `${nftId}|${currentBlock + 10}`;
-    const hex = buildTxHex({
-      opReturnPayload: payload,
-      outputs: [
-        { addr: creatorAddr, value: 1_234 },
-      ],
-    });
-    const amt = await verifyPayment(hex, creatorAddr, 1n, nftId, {
+    
+    // Build transaction with regtest network
+    const tx = new Transaction();
+    tx.version = 2;
+    const prevTxId = Buffer.alloc(32, 2);
+    tx.addInput(prevTxId, 0xffffffff);
+    tx.addOutput(encodeOpReturnScript(payload), 0);
+    const script = address.toOutputScript(regtestAddr, networks.regtest);
+    tx.addOutput(script, 1_234);
+    const hex = tx.toHex();
+    
+    const amt = await verifyPayment(hex, regtestAddr, 1n, nftId, {
       currentBlock,
       network: 'regtest',
       txBlockHeight: 220000,

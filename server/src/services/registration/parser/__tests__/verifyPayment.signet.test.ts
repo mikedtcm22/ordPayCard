@@ -31,7 +31,7 @@ function buildPaymentTx(
   tx.addInput(Buffer.alloc(32, 1), 0);
   
   // Add payment output
-  const net = network === 'regtest' ? networks.testnet : networks.testnet; // All test networks use testnet params
+  const net = network === 'regtest' ? networks.regtest : networks.testnet; // Use correct network
   tx.addOutput(
     address.toOutputScript(creatorAddress, net),
     amount
@@ -70,10 +70,10 @@ describe('verifyPayment on Signet', () => {
 
     it('should verify regtest transaction with regtest network', async () => {
       // Create regtest-specific fixture
-      const regtestKey = ECPair.makeRandom({ network: networks.testnet });
+      const regtestKey = ECPair.makeRandom({ network: networks.regtest });
       const regtestAddr = payments.p2wpkh({
         pubkey: toBuffer(regtestKey.publicKey),
-        network: networks.testnet
+        network: networks.regtest
       }).address!;
       
       const regtestTx = buildPaymentTx(
@@ -325,11 +325,12 @@ describe('verifyPayment on Signet', () => {
       const supportedNetworks = ['signet', 'regtest', 'testnet'] as const;
       
       for (const net of supportedNetworks) {
-        // Create appropriate address for each network (all use testnet params)
-        const key = ECPair.makeRandom({ network: networks.testnet });
+        // Create appropriate address for each network
+        const btcNetwork = net === 'regtest' ? networks.regtest : networks.testnet;
+        const key = ECPair.makeRandom({ network: btcNetwork });
         const addr = payments.p2wpkh({
           pubkey: toBuffer(key.publicKey),
-          network: networks.testnet
+          network: btcNetwork
         }).address!;
         
         const tx = buildPaymentTx(

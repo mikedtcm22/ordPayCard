@@ -124,16 +124,24 @@ describe('sumOutputsToAddress (A2)', () => {
     expect(sum).toBe(2001n);
   });
 
-  test('supports signet and regtest networks (mapped to testnet)', () => {
-    const keyCreator = makeKeyPair();
-    const creatorAddr = payments.p2wpkh({ pubkey: toBuffer(keyCreator.publicKey), network: networks.testnet }).address!;
-    const scriptCreator = address.toOutputScript(creatorAddr, networks.testnet);
-    const hex = buildTxHex([
-      { script: scriptCreator, value: 3210 },
+  test('supports signet and regtest networks', () => {
+    // Test signet (uses testnet addresses)
+    const keySignet = makeKeyPair();
+    const signetAddr = payments.p2wpkh({ pubkey: toBuffer(keySignet.publicKey), network: networks.testnet }).address!;
+    const scriptSignet = address.toOutputScript(signetAddr, networks.testnet);
+    const hexSignet = buildTxHex([
+      { script: scriptSignet, value: 3210 },
     ]);
+    expect(sumOutputsToAddress(hexSignet, signetAddr, 'signet')).toBe(3210n);
 
-    expect(sumOutputsToAddress(hex, creatorAddr, 'signet')).toBe(3210n);
-    expect(sumOutputsToAddress(hex, creatorAddr, 'regtest')).toBe(3210n);
+    // Test regtest (uses regtest addresses)
+    const keyRegtest = ECPair.makeRandom({ network: networks.regtest });
+    const regtestAddr = payments.p2wpkh({ pubkey: toBuffer(keyRegtest.publicKey), network: networks.regtest }).address!;
+    const scriptRegtest = address.toOutputScript(regtestAddr, networks.regtest);
+    const hexRegtest = buildTxHex([
+      { script: scriptRegtest, value: 3210 },
+    ]);
+    expect(sumOutputsToAddress(hexRegtest, regtestAddr, 'regtest')).toBe(3210n);
   });
 
   test('throws on invalid raw transaction hex', () => {

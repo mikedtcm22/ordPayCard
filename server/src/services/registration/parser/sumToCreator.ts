@@ -7,8 +7,9 @@ function getBitcoinjsNetwork(net: SupportedNetwork): Network {
       return networks.bitcoin;
     case 'testnet':
     case 'signet':
-    case 'regtest':
       return networks.testnet;
+    case 'regtest':
+      return networks.regtest;
     default:
       // Exhaustive guard
       throw new Error(`Unsupported network: ${String(net)}`);

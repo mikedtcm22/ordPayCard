@@ -46,14 +46,14 @@ describe('sumToCreator with network parameter', () => {
     });
 
     it('should accept regtest addresses on regtest network', () => {
-      // Regtest also uses testnet network params in bitcoinjs-lib
-      const key = ECPair.makeRandom({ network: networks.testnet });
+      // Regtest uses its own network params in bitcoinjs-lib
+      const key = ECPair.makeRandom({ network: networks.regtest });
       const regtestAddr = payments.p2wpkh({ 
         pubkey: toBuffer(key.publicKey), 
-        network: networks.testnet 
+        network: networks.regtest 
       }).address!;
       
-      const script = address.toOutputScript(regtestAddr, networks.testnet);
+      const script = address.toOutputScript(regtestAddr, networks.regtest);
       const txHex = buildTxHex([
         { script, value: 50000 }
       ]);
@@ -151,13 +151,13 @@ describe('sumToCreator with network parameter', () => {
     it('should handle network parameter as optional with default', () => {
       // This test documents current behavior - network is required
       // If we want backward compatibility, we'd need to make it optional
-      const key = ECPair.makeRandom({ network: networks.testnet });
+      const key = ECPair.makeRandom({ network: networks.regtest });
       const addr = payments.p2wpkh({ 
         pubkey: toBuffer(key.publicKey), 
-        network: networks.testnet 
+        network: networks.regtest 
       }).address!;
       
-      const script = address.toOutputScript(addr, networks.testnet);
+      const script = address.toOutputScript(addr, networks.regtest);
       const txHex = buildTxHex([{ script, value: 10000 }]);
       
       // Current implementation requires network
@@ -262,26 +262,35 @@ describe('sumToCreator with network parameter', () => {
 
   describe('Cross-network compatibility', () => {
     it('should properly distinguish between networks', () => {
-      // All test networks use the same address format in bitcoinjs-lib
-      // but our implementation should still validate network parameter
-      const key = ECPair.makeRandom({ network: networks.testnet });
-      const addr = payments.p2wpkh({ 
-        pubkey: toBuffer(key.publicKey), 
+      // Testnet and signet share the same address format
+      const testnetKey = ECPair.makeRandom({ network: networks.testnet });
+      const testnetAddr = payments.p2wpkh({ 
+        pubkey: toBuffer(testnetKey.publicKey), 
         network: networks.testnet 
       }).address!;
       
-      const script = address.toOutputScript(addr, networks.testnet);
-      const txHex = buildTxHex([{ script, value: 10000 }]);
+      const testnetScript = address.toOutputScript(testnetAddr, networks.testnet);
+      const testnetTxHex = buildTxHex([{ script: testnetScript, value: 10000 }]);
       
-      // Should work with all test networks
-      const signetAmount = sumOutputsToAddress(txHex, addr, 'signet');
+      // Should work with testnet and signet (same address format)
+      const signetAmount = sumOutputsToAddress(testnetTxHex, testnetAddr, 'signet');
       expect(signetAmount).toBe(10000n);
       
-      const regtestAmount = sumOutputsToAddress(txHex, addr, 'regtest');
-      expect(regtestAmount).toBe(10000n);
-      
-      const testnetAmount = sumOutputsToAddress(txHex, addr, 'testnet');
+      const testnetAmount = sumOutputsToAddress(testnetTxHex, testnetAddr, 'testnet');
       expect(testnetAmount).toBe(10000n);
+      
+      // Regtest uses different address format
+      const regtestKey = ECPair.makeRandom({ network: networks.regtest });
+      const regtestAddr = payments.p2wpkh({ 
+        pubkey: toBuffer(regtestKey.publicKey), 
+        network: networks.regtest 
+      }).address!;
+      
+      const regtestScript = address.toOutputScript(regtestAddr, networks.regtest);
+      const regtestTxHex = buildTxHex([{ script: regtestScript, value: 10000 }]);
+      
+      const regtestAmount = sumOutputsToAddress(regtestTxHex, regtestAddr, 'regtest');
+      expect(regtestAmount).toBe(10000n);
     });
   });
 });
