@@ -13,7 +13,7 @@ const SUPPORTED_NETWORKS: BitcoinNetwork[] = ['regtest', 'signet', 'testnet', 'm
  * @returns The validated network
  * @throws Error with clear message if network is invalid
  */
-export function validateNetwork(network: any): BitcoinNetwork {
+export function validateNetwork(network: unknown): BitcoinNetwork {
   // Check for missing network
   if (!network || network === undefined) {
     throw new Error(
@@ -22,8 +22,16 @@ export function validateNetwork(network: any): BitcoinNetwork {
     );
   }
 
+  // Check if network is a string
+  if (typeof network !== 'string') {
+    throw new Error(
+      `Invalid network type: expected string, got ${typeof network}. ` +
+      `Supported networks: ${SUPPORTED_NETWORKS.join(', ')}`
+    );
+  }
+
   // Check if network is supported
-  if (!SUPPORTED_NETWORKS.includes(network)) {
+  if (!SUPPORTED_NETWORKS.includes(network as BitcoinNetwork)) {
     let errorMsg = `Unsupported network: ${network}. ` +
                    `Expected one of: ${SUPPORTED_NETWORKS.join(', ')}`;
     

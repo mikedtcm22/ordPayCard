@@ -41,8 +41,8 @@ export function validateAddress(address: string, network: BitcoinNetwork): boole
     
     // If we get here, the address is valid for this network
     return true;
-  } catch (error: any) {
-    const errorMsg = error.message || '';
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : '';
     
     // Check for invalid prefix (wrong network)
     if (errorMsg.includes('invalid prefix')) {
@@ -57,9 +57,9 @@ export function validateAddress(address: string, network: BitcoinNetwork): boole
             `Address network mismatch. ` +
             `Address appears to be for ${testNetwork}, but expected ${network}`
           );
-        } catch (testError: any) {
+        } catch (testError: unknown) {
           // Continue checking other networks
-          if (testError.message?.includes('Address network mismatch')) {
+          if (testError instanceof Error && testError.message?.includes('Address network mismatch')) {
             throw testError;
           }
         }

@@ -225,6 +225,15 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 5. **Common typo detection**: Expand suggestions for common network name mistakes
 6. **Centralize network constants**: Extract all network-related constants to a single module
 
+## REFACTOR Notes for S1.1 - Strong address validation
+
+1. **P2TR support**: Currently skipped - need to verify bitcoinjs-lib version and add proper P2TR validation
+2. **Performance optimization**: Consider caching validation results for frequently used addresses
+3. **Error categorization**: Create specific error classes for different validation failures
+4. **Validation depth**: Add optional validation for script type restrictions (e.g., only allow P2WPKH)
+5. **Batch validation**: Add function to validate multiple addresses efficiently
+6. **Address derivation**: Consider adding validation for HD wallet paths and derivation
+
 ## Documentation/Process Tasks Queued (from D1–D3 Refactor Notes)
 
 These are deliberately deferred and not part of the current code task plan. Keep in queue for a later documentation-focused pass.

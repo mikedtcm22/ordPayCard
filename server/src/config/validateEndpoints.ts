@@ -34,7 +34,7 @@ export function validateEndpoints(config: EndpointConfig): void {
     if (!['http:', 'https:'].includes(url.protocol)) {
       throw new Error('Invalid protocol');
     }
-  } catch (error) {
+  } catch {
     throw new Error(
       `Invalid endpoint URL: ${config.ordinals_api_url}. ` +
       `Expected format: https://example.com`

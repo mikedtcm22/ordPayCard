@@ -55,15 +55,16 @@ export async function verifyPayment(
   // Validate network parameter at entry
   try {
     validateNetwork(opts.network);
-  } catch (error: any) {
-    throw new Error(error.message);
+  } catch (error: unknown) {
+    throw new Error(error instanceof Error ? error.message : 'Invalid network');
   }
 
   // Validate creator address for the network
   try {
     validateAddress(creatorAddr, opts.network);
-  } catch (error: any) {
-    throw new Error(`Invalid creator address: ${error.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Invalid address';
+    throw new Error(`Invalid creator address: ${message}`);
   }
 
   // Acquire raw tx hex. Current tests supply hex directly.
