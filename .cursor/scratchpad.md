@@ -697,3 +697,53 @@ All Embers Core Deployment tasks have been successfully completed:
 **Archive Note**: Completed Phase 1 work and infrastructure analysis archived to:
 - `.cursor/scratchpad-history-phase1.md`
 - `.cursor/scratchpad-history-infrastructure.md`
+
+## Planner: Refactor Prioritization for Signet Core Embers Test (Now vs Later)
+
+### Goal Alignment
+Focus only on improvements that increase the likelihood of a successful, near-production Signet test of core Embers functionality with minimal anti-forgery safeguards. Defer structural/UX/scale work.
+
+### NOW (High impact for Signet test reliability & anti-forgery)
+1. S5.2 — Deployment verification and rich logs
+   - Add actual fetch-and-validate of inscription content after deploy; emit txid, inscription id, byte length, SHA-256 checksum in logs.
+   - Success: `deploy-embers-core.sh --verify` fails fast on mismatch; logs contain ids + checksum.
+
+2. S5.3 — Loader: stronger error reporting + multi-source fallback
+   - Improve error surfaces with actionable messages; add fallback to CDN/local bundle if inscription fetch fails or lags.
+   - Success: When ord index is behind, app loads from fallback automatically; errors include network, URL, and retry hints.
+
+3. S1.2 — Endpoint validation and per-endpoint timeouts
+   - Validate base URLs upfront; set explicit timeouts for ord endpoints; reuse S4.3 health probes at startup.
+   - Success: Invalid/missing endpoints are rejected at boot; network calls respect timeouts (e.g., 10s) with clear errors.
+
+4. S2.1 — Explicit network validation at function entry + clearer errors
+   - Fail fast if network is unsupported/undefined; include expected vs provided network in messages.
+   - Success: Parser/verifyPayment guard clauses return precise, network-aware errors.
+
+5. S1.1 — Strong address validation for creator pay-to detection
+   - Replace prefix-only checks with full address validation (e.g., bitcoinjs-lib) including checksum per network.
+   - Success: Invalid destination addresses are rejected pre-parse; tests cover P2WPKH/P2TR/P2PKH across networks.
+
+6. S5.2 — Optional, gated real ord CLI integration (feature flag)
+   - Enable real ord inscription on Signet when node is available; keep mock as fallback.
+   - Success: `ORD_INTEGRATION=1` path performs real inscription; dry-run and mock remain unchanged.
+
+7. E1 — OP_RETURN size and validation notes (docs quality-of-life)
+   - Document 80–83 byte limits and add `validateaddress`/decode examples; link to parser rules.
+   - Success: Docs include explicit size guidance and a minimal validation snippet for operators.
+
+### LATER (Valuable, but not needed for immediate Signet goal)
+- S5.1 — Real Vite integration with defineConfig and plugins
+- S5.2 — Rollback capability; version management; multi-wallet; fee estimation; batch deploy; CI/CD workflow; advanced error recovery
+- S5.3 — Async loading/progress; semver compatibility checks; cache TTL; preload hints; CSP; template variants; hot reload
+- S1.1 — Config schema via zod/joi; network constants extraction; typed env; config factory
+- S1.2 — Endpoint path constants; endpoint resolution caching; network-specific endpoint patterns
+- S1.3 — Config validation middleware; migration/versioning; hot-reload; provider abstraction
+- S2.1 — Network type safety via const/enums; default network fallback (keep explicit for now)
+- S2.2 — Real mainnet/testnet fixtures; generator; deeper fixture validation; performance fixtures; deterministic seeds
+- S2.3 — Test organization split; shared test helpers; broader error/perf/integration tests
+- E1 — Script automation; RBF guidance; advanced PSBT flows; Windows/PowerShell examples; library integration examples
+- E2 — Wallet matrix expansion; videos; scripts repo; interactive debugger; hardware/mobile coverage; programmatic API guide
+
+### Notes
+- The NOW set is intentionally small and pragmatic: improve reliability of fetching/loading, fail-fast on config/address/network, and add post-deploy verification. This directly reduces false positives/negatives during Signet runs and strengthens minimal anti-forgery without large structural changes.
