@@ -205,6 +205,17 @@ The project prioritizes simplicity, security, and decentralization with minimal 
 - TDD automation now runs smoothly without manual interruption or Ctrl+C requirement
 
 ## Lessons
+
+## REFACTOR Notes for S1.2 - Endpoint validation and per-endpoint timeouts
+
+1. **Centralize timeout configuration**: Create a centralized config for all endpoint timeouts instead of passing them inline
+2. **Add health check service**: Extract health checking logic into a reusable service that can be used at startup and runtime
+3. **Implement metrics hooks**: Add hooks for tracking timeout occurrences and network latency for monitoring
+4. **URL validation depth**: Consider deeper URL validation (check for valid TLDs, reserved IPs, etc.)
+5. **Retry with backoff**: Add configurable retry logic with exponential backoff for transient failures
+6. **Circuit breaker pattern**: Implement circuit breaker to prevent cascading failures when endpoints are down
+7. **Timeout escalation**: Different timeouts for different operations (fast fail for health, longer for data fetch)
+
 ## Documentation/Process Tasks Queued (from D1–D3 Refactor Notes)
 
 These are deliberately deferred and not part of the current code task plan. Keep in queue for a later documentation-focused pass.

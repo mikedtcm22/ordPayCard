@@ -14,6 +14,7 @@
 import type { VerifyPaymentOptions } from './types';
 import { parseOpReturn, isExpired } from './opReturn';
 import { sumOutputsToAddress } from './sumToCreator';
+import { validateNetwork } from '../../../lib/validation/network';
 
 function isHex(s: string): boolean {
   return /^[0-9a-fA-F]+$/.test(s) && s.length % 2 === 0;
@@ -50,6 +51,13 @@ export async function verifyPayment(
   nftId: string,
   opts: VerifyPaymentOptions,
 ): Promise<bigint> {
+  // Validate network parameter at entry
+  try {
+    validateNetwork(opts.network);
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+
   // Acquire raw tx hex. Current tests supply hex directly.
   const rawTxHex = await resolveRawTxHex(txhexOrId, opts);
   if (!rawTxHex) return 0n;
