@@ -742,6 +742,27 @@ All Embers Core Deployment tasks have been successfully completed:
 - Consider adding retry logic with exponential backoff
 - Add progress callbacks for UI feedback during loading
 
+## Refactoring Notes - S5.2 Optional ord CLI Integration (2025-08-22)
+
+### Completed
+- Implemented feature flag (ORD_INTEGRATION=1) to enable real ord CLI
+- Automatic fallback to mock when ord unavailable
+- Environment validation for required ord variables
+- Network-specific configuration (signet, testnet, mainnet)
+- Dry-run mode compatibility
+
+### Potential Refactoring
+- Add ord connectivity test before deployment
+- Implement wallet balance check before inscription
+- Add support for custom fee rates
+- Implement transaction monitoring after inscription
+- Add retry logic for transient ord failures
+- Support for batch inscriptions
+- Add ord version compatibility check
+- Implement rollback/cancel functionality
+- Add support for different inscription types (text, image, etc.)
+- Integration with ord wallet management commands
+
 ## Refactoring Notes - S5.2 Deployment Verification (2025-08-22)
 
 ### Completed

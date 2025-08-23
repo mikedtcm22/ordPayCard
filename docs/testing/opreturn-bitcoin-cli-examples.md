@@ -4,6 +4,10 @@
 
 This guide provides canonical bitcoin-cli command examples for creating registration fee transactions with embedded OP_RETURN data. The OP_RETURN output contains the inscription ID and expiry block in the format `<NFT_ID>|<EXPIRY_BLOCK>` to bind the payment to a specific NFT registration.
 
+### OP_RETURN Size Limits
+
+Bitcoin's standard OP_RETURN size limit is **80 bytes** of data. With OP_PUSHDATA opcodes, the practical limit can extend to **83 bytes**. The registration data format `<NFT_ID>|<EXPIRY_BLOCK>` typically uses 75-80 bytes, fitting comfortably within these limits.
+
 ## Prerequisites
 
 - Bitcoin Core node running (regtest, signet, testnet, or mainnet)
@@ -29,7 +33,24 @@ echo -n "abc123def456789012345678901234567890123456789012345678901234567i0|85000
 # Output: 6162633132336465663435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536376930377c383530303030
 ```
 
-### Step 2: Create Raw Transaction with OP_RETURN
+### Step 2: Validate Creator Address
+
+Before creating the transaction, validate the creator address:
+```bash
+# Validate address format and network compatibility
+bitcoin-cli validateaddress "CREATOR_ADDRESS"
+
+# Response should show:
+# {
+#   "isvalid": true,
+#   "address": "CREATOR_ADDRESS",
+#   "scriptPubKey": "...",
+#   "isscript": false,
+#   "iswitness": true
+# }
+```
+
+### Step 3: Create Raw Transaction with OP_RETURN
 
 Using `createrawtransaction`:
 ```bash
@@ -52,7 +73,7 @@ bitcoin-cli createrawtransaction '[
 ]'
 ```
 
-### Step 3: Fund and Sign Transaction
+### Step 4: Fund and Sign Transaction
 
 Using `fundrawtransaction` for automatic input selection:
 ```bash

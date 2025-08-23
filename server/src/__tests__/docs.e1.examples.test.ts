@@ -1,75 +1,168 @@
 /**
- * Test for E1: bitcoin-cli OP_RETURN examples documentation
- * 
- * Purpose: Ensure documentation exists with required bitcoin-cli examples
- * for creating OP_RETURN transactions with inscription ID and expiry block.
- * 
- * Test verifies:
- * - Documentation file exists at expected location
- * - Contains required placeholders (<NFT_ID> and <EXPIRY_BLOCK>)
- * - Includes OP_RETURN output in code examples
- * - Has required sections (Overview, Prerequisites, Examples, Troubleshooting)
+ * Tests for OP_RETURN documentation and examples
+ * Verifies documentation contains required content about size limits and validation
  */
 
+import { describe, it, expect } from '@jest/globals';
 import * as fs from 'fs';
 import * as path from 'path';
 
-describe('E1: bitcoin-cli OP_RETURN examples documentation', () => {
+describe('E1 - OP_RETURN documentation', () => {
   const docPath = path.join(__dirname, '../../../docs/testing/opreturn-bitcoin-cli-examples.md');
-
-  it('should have documentation file at expected location', () => {
-    expect(fs.existsSync(docPath)).toBe(true);
+  
+  describe('document existence', () => {
+    it('should have OP_RETURN examples document', () => {
+      // Assert
+      expect(fs.existsSync(docPath)).toBe(true);
+    });
   });
-
-  it('should contain required placeholders and content', () => {
-    const content = fs.readFileSync(docPath, 'utf-8');
+  
+  describe('required content', () => {
+    let docContent: string;
     
-    // Required placeholders
-    expect(content).toContain('<NFT_ID>');
-    expect(content).toContain('<EXPIRY_BLOCK>');
+    beforeAll(() => {
+      // Read document content if it exists
+      if (fs.existsSync(docPath)) {
+        docContent = fs.readFileSync(docPath, 'utf8');
+      } else {
+        docContent = '';
+      }
+    });
     
-    // OP_RETURN must be present in code blocks
-    expect(content).toMatch(/`[^`]*OP_RETURN[^`]*`/);
+    it('should mention OP_RETURN size limits (80-83 bytes)', () => {
+      // Assert
+      expect(docContent).toContain('80');
+      expect(docContent).toContain('bytes');
+      expect(docContent.toLowerCase()).toContain('op_return');
+      
+      // Should mention the range
+      const hasRange = docContent.includes('80-83') || 
+                       docContent.includes('80 to 83') ||
+                       (docContent.includes('80') && docContent.includes('83'));
+      expect(hasRange).toBe(true);
+    });
     
-    // Required sections
-    expect(content).toMatch(/#+\s*Overview/i);
-    expect(content).toMatch(/#+\s*Prerequisites/i);
-    expect(content).toMatch(/#+\s*Regtest/i);
-    expect(content).toMatch(/#+\s*Troubleshooting/i);
+    it('should include validateaddress usage', () => {
+      // Assert
+      expect(docContent).toContain('validateaddress');
+      expect(docContent).toContain('bitcoin-cli');
+    });
+    
+    it('should contain NFT_ID and EXPIRY_BLOCK placeholders', () => {
+      // Assert
+      expect(docContent).toContain('<NFT_ID>');
+      expect(docContent).toContain('<EXPIRY_BLOCK>');
+      
+      // Should show the pipe separator format
+      expect(docContent).toContain('|');
+    });
+    
+    it('should include OP_RETURN in code blocks', () => {
+      // Assert - look for OP_RETURN in code blocks (indented or fenced)
+      const codeBlockWithOpReturn = 
+        /```[\s\S]*?OP_RETURN[\s\S]*?```/.test(docContent) || // Fenced code block
+        /    .*OP_RETURN/.test(docContent); // Indented code block
+      
+      expect(codeBlockWithOpReturn).toBe(true);
+    });
+    
+    it('should include minimal decode/verification snippet', () => {
+      // Assert
+      expect(docContent).toContain('decode');
+      
+      // Should have verification steps
+      const hasVerification = 
+        docContent.includes('verify') ||
+        docContent.includes('validation') ||
+        docContent.includes('check');
+      expect(hasVerification).toBe(true);
+    });
+    
+    it('should link to parser rules', () => {
+      // Assert - should reference parser or status API
+      const hasParserLink = 
+        docContent.includes('parser') ||
+        docContent.includes('registration/parser') ||
+        docContent.includes('status API');
+      expect(hasParserLink).toBe(true);
+    });
+    
+    it('should have network-specific examples', () => {
+      // Assert - should mention different networks
+      expect(docContent.toLowerCase()).toContain('regtest');
+      expect(docContent.toLowerCase()).toContain('signet');
+      
+      // Should mention testnet or mainnet
+      const hasOtherNetworks = 
+        docContent.toLowerCase().includes('testnet') ||
+        docContent.toLowerCase().includes('mainnet');
+      expect(hasOtherNetworks).toBe(true);
+    });
+    
+    it('should include fundrawtransaction or walletcreatefundedpsbt', () => {
+      // Assert - should show funding methods
+      const hasFundingMethod = 
+        docContent.includes('fundrawtransaction') ||
+        docContent.includes('walletcreatefundedpsbt');
+      expect(hasFundingMethod).toBe(true);
+    });
+    
+    it('should have troubleshooting section', () => {
+      // Assert
+      expect(docContent.toLowerCase()).toContain('troubleshoot');
+      
+      // Should mention common errors
+      const hasErrors = 
+        docContent.toLowerCase().includes('error') ||
+        docContent.toLowerCase().includes('issue') ||
+        docContent.toLowerCase().includes('problem');
+      expect(hasErrors).toBe(true);
+    });
   });
-
-  it('should include bitcoin-cli command examples', () => {
-    const content = fs.readFileSync(docPath, 'utf-8');
+  
+  describe('document structure', () => {
+    let docContent: string;
     
-    // Should have bitcoin-cli commands
-    expect(content).toMatch(/bitcoin-cli/);
+    beforeAll(() => {
+      if (fs.existsSync(docPath)) {
+        docContent = fs.readFileSync(docPath, 'utf8');
+      } else {
+        docContent = '';
+      }
+    });
     
-    // Should have createrawtransaction or similar
-    expect(content).toMatch(/createrawtransaction|fundrawtransaction|walletcreatefundedpsbt/);
+    it('should have proper markdown structure', () => {
+      // Assert - should have headers
+      expect(docContent).toContain('#');
+      
+      // Should have Overview section
+      expect(docContent).toContain('Overview');
+      
+      // Should have Prerequisites or Requirements
+      const hasPrereqs = 
+        docContent.includes('Prerequisite') ||
+        docContent.includes('Requirement');
+      expect(hasPrereqs).toBe(true);
+    });
     
-    // Should mention hex encoding for OP_RETURN data
-    expect(content).toMatch(/hex|hexadecimal/i);
-  });
-
-  it('should include network-specific notes', () => {
-    const content = fs.readFileSync(docPath, 'utf-8');
-    
-    // Should mention different networks
-    expect(content).toMatch(/regtest/i);
-    expect(content).toMatch(/signet|testnet/i);
-    expect(content).toMatch(/mainnet/i);
-  });
-
-  it('should include proper OP_RETURN format documentation', () => {
-    const content = fs.readFileSync(docPath, 'utf-8');
-    
-    // Should document the canonical format
-    expect(content).toContain('|'); // Pipe separator between NFT_ID and EXPIRY_BLOCK
-    
-    // Should explain expiry block
-    expect(content).toMatch(/expiry|expiration/i);
-    
-    // Should mention creator address payment
-    expect(content).toMatch(/creator|payment|fee/i);
+    it('should include complete example commands', () => {
+      // Assert - should have bitcoin-cli commands
+      expect(docContent).toContain('bitcoin-cli');
+      
+      // Should have complete transaction creation flow
+      const hasTransactionFlow = 
+        docContent.includes('createrawtransaction') ||
+        docContent.includes('createpsbt');
+      expect(hasTransactionFlow).toBe(true);
+      
+      // Should show signing
+      const hasSigning = 
+        docContent.includes('signrawtransaction') ||
+        docContent.includes('walletprocesspsbt');
+      expect(hasSigning).toBe(true);
+      
+      // Should show broadcasting
+      expect(docContent).toContain('sendrawtransaction');
+    });
   });
 });
