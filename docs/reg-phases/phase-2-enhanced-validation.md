@@ -317,21 +317,27 @@ Micro-task D3: Loader snippet resolves latest child by parent ID
 
 Track E — Tooling & examples
 
-Micro-task E1: `bitcoin-cli` OP_RETURN examples
-- RED
+Micro-task E1: `bitcoin-cli` OP_RETURN examples ✅ COMPLETED
+- RED ✅
   - Lint/validate docs presence via docs test (markdown check); ensure example includes inscription ID and expiry.
-- GREEN
-  - Provide canonical commands in `docs/` with placeholders; include troubleshooting.
-- REFACTOR (planning)
-  - Add PSBT examples with annotate steps.
+  - Test: `server/src/__tests__/docs.e1.examples.test.ts` (5 test cases verifying doc structure and content)
+- GREEN ✅
+  - Provide canonical commands in `docs/testing/opreturn-bitcoin-cli-examples.md` with placeholders; include troubleshooting.
+  - Documentation includes: regtest/signet/testnet/mainnet examples, hex encoding, PSBT workflow, validation commands
+- REFACTOR (planning) ✅
+  - Add PSBT examples with annotate steps (included in GREEN phase)
+  - Future enhancements documented in scratchpad: script automation, RBF examples, cross-platform commands
 
-Micro-task E2: Wallet troubleshooting guide
-- RED
+Micro-task E2: Wallet troubleshooting guide ✅ COMPLETED
+- RED ✅
   - Docs test asserts required sections present (supported wallets, alternatives, raw builder flow).
-- GREEN
+  - Test: `server/src/__tests__/docs.e2.troubleshooting.test.ts` (8 test cases verifying all sections)
+- GREEN ✅
   - Author guide with clear steps and fallbacks.
-- REFACTOR (planning)
+  - Documentation: `docs/testing/wallet-troubleshooting.md` with wallet matrix, alternatives, verification steps, FAQ
+- REFACTOR (planning) ✅
   - Add screenshots later.
+  - Future enhancements documented in scratchpad: video tutorials, hardware wallets, mobile support
 
 ----
 

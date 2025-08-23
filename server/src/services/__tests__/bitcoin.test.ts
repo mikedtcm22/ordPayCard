@@ -17,6 +17,11 @@ import {
 describe('Bitcoin Service', () => {
   const originalEnv = process.env['BITCOIN_NETWORK'];
 
+  beforeEach(() => {
+    // Ensure clean state for each test
+    delete process.env['BITCOIN_NETWORK'];
+  });
+
   afterEach(() => {
     // Restore original environment
     if (originalEnv) {
@@ -113,6 +118,11 @@ describe('Bitcoin Service', () => {
 
     it('should throw for invalid network config', () => {
       process.env['BITCOIN_NETWORK'] = 'invalid';
+      expect(() => validateNetworkConfig()).toThrow('Bitcoin network configuration invalid');
+    });
+
+    it('should throw for undefined network config', () => {
+      delete process.env['BITCOIN_NETWORK'];
       expect(() => validateNetworkConfig()).toThrow('Bitcoin network configuration invalid');
     });
   });

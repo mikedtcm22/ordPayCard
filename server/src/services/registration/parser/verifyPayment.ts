@@ -14,6 +14,8 @@
 import type { VerifyPaymentOptions } from './types';
 import { parseOpReturn, isExpired } from './opReturn';
 import { sumOutputsToAddress } from './sumToCreator';
+import { validateNetwork } from '../../../lib/validation/network';
+import { validateAddress } from '../../../lib/validation/address';
 
 function isHex(s: string): boolean {
   return /^[0-9a-fA-F]+$/.test(s) && s.length % 2 === 0;
@@ -50,6 +52,21 @@ export async function verifyPayment(
   nftId: string,
   opts: VerifyPaymentOptions,
 ): Promise<bigint> {
+  // Validate network parameter at entry
+  try {
+    validateNetwork(opts.network);
+  } catch (error: unknown) {
+    throw new Error(error instanceof Error ? error.message : 'Invalid network');
+  }
+
+  // Validate creator address for the network
+  try {
+    validateAddress(creatorAddr, opts.network);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Invalid address';
+    throw new Error(`Invalid creator address: ${message}`);
+  }
+
   // Acquire raw tx hex. Current tests supply hex directly.
   const rawTxHex = await resolveRawTxHex(txhexOrId, opts);
   if (!rawTxHex) return 0n;

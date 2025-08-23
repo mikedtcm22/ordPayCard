@@ -45,8 +45,37 @@
       "Bash(cat:*)",
       "Bash(npm test:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm run build:embers-core:*)",
+      "Bash(git push:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run postbuild:embers-core:*)",
+      "Bash(npm run analyze:embers-core:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(./scripts/signet-ensure.sh:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(CI=true npm test -- --testPathPattern=\"signet.test\")",
+      "Bash(CI=true npm test -- --testPathPattern=\"parser.signet.test\" --verbose)",
+      "Bash(CI=true npm test -- src/__tests__/integration/signet/parser.signet.test.ts)",
+      "Bash(CI=true npm test -- --testPathPattern=\"(parser|status|e2e).signet.test\")",
+      "Bash(BITCOIN_NETWORK=testnet CI=true npm test -- src/services/__tests__/bitcoin.test.ts)",
+      "Bash(CI=true npm test -- src/config/__tests__/index.integration.test.ts)",
+      "Bash(CI=true BITCOIN_NETWORK=testnet npm test)",
+      "Bash(./scripts/signet-test/__tests__/generate-test-tx.test.sh:*)",
+      "Bash(./scripts/signet-test/__tests__/inscribe-test-parent.test.sh:*)",
+      "Bash(./scripts/signet-test/__tests__/create-test-receipt.test.sh:*)",
+      "Bash(./scripts/__tests__/test-signet.test.sh:*)",
+      "Bash(./scripts/signet-test/__tests__/check-prerequisites.test.sh:*)",
+      "Bash(CI=true npm test -- src/__tests__/integration/signet/health.test.ts)",
+      "Bash(CI=true npm test -- --testPathPattern=\"integration/signet\")",
+      "Bash(/Users/michaelchristopher/repos/ordPayCard/scripts/signet-test/__tests__/deploy-embers.test.sh)",
+      "Bash(/Users/michaelchristopher/repos/ordPayCard/scripts/signet-test/verify-deployment.sh:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/Users/michaelchristopher/repos"
+    ]
   }
 }

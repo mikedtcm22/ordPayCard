@@ -1,0 +1,20 @@
+{
+  "network": "signet",
+  "timestamp": "2025-08-21T11:58:55Z",
+  "duration_seconds": 2,
+  "mode": {
+    "quick": false,
+    "unit_only": false,
+    "integration_only": true
+  },
+  "results": {
+    "unit_tests": "skipped",
+    "integration_tests": "completed",
+    "prerequisites_checked": false
+  },
+  "environment": {
+    "node_version": "v22.17.1",
+    "npm_version": "10.9.2",
+    "network": "signet"
+  }
+}

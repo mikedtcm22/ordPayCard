@@ -12,10 +12,16 @@ CONFIG_FILE="$PROJECT_ROOT/configs/bitcoin-signet.conf"
 echo "Starting Bitcoin Core with Signet configuration..."
 echo "Config file: $CONFIG_FILE"
 
-# Check if bitcoind is already running
+# Check if bitcoind is already running for signet RPC port (or any bitcoind)
 if pgrep -x "bitcoind" > /dev/null; then
-    echo "⚠️  bitcoind is already running. Stop it first with ./signet-stop.sh"
-    exit 1
+    # Validate if this instance is already on signet RPC port
+    if bitcoin-cli -conf="$CONFIG_FILE" getblockchaininfo > /dev/null 2>&1; then
+        echo "⚠️  bitcoind already running with Signet configuration. Stop it first with ./signet-stop.sh"
+        exit 0
+    else
+        echo "⚠️  bitcoind is running but not reachable with the provided Signet config. Stop it first with ./signet-stop.sh"
+        exit 1
+    fi
 fi
 
 # Start bitcoind with signet config

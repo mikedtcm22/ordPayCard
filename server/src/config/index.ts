@@ -3,6 +3,9 @@
  * @module config
  */
 
+import { loadNetworkConfig, validateNetworkConfig, type BitcoinNetwork } from './network';
+import { getEndpoints } from './endpoints';
+
 interface CacheConfig {
   ttl: number;
   maxSize: number;
@@ -16,6 +19,10 @@ interface RegistrationConfig {
     childrenPath: string;
     txPath: string;
     contentPath: string;
+    metadata?: string;
+    children?: string;
+    inscription?: string;
+    content?: string;
   };
   timeouts: {
     fetch: number;
@@ -29,11 +36,25 @@ interface RegistrationConfig {
     windowK: number;
     currentBlockHeight: number;
   };
+  creatorAddress?: string;
 }
 
 interface NetworkConfig {
-  bitcoin: 'mainnet' | 'testnet' | 'signet' | 'regtest';
+  bitcoin: BitcoinNetwork;
   ordinalsApiUrl: string;
+}
+
+// Add server interface for test compatibility
+interface ServerConfig {
+  port: number;
+  cors: {
+    origin: string;
+  };
+}
+
+// Add JWT interface for test compatibility
+interface JWTConfig {
+  secret: string;
 }
 
 interface CacheTypeConfig {
@@ -46,6 +67,8 @@ export interface AppConfig {
   registration: RegistrationConfig;
   network: NetworkConfig;
   cache: CacheTypeConfig;
+  server?: ServerConfig;
+  jwt?: JWTConfig;
   export(): object;
   toJSON(): string;
 }
@@ -122,7 +145,46 @@ class ConfigManager {
   }
 
   private applyEnvironmentVariables(): void {
-    // Apply ordinals API URL
+    // Load network-aware configuration
+    try {
+      const networkConfig = loadNetworkConfig();
+      
+      // Validate the configuration - this will throw if invalid
+      validateNetworkConfig(networkConfig);
+      
+      // Apply network settings
+      this.config.network.bitcoin = networkConfig.network;
+      this.config.network.ordinalsApiUrl = networkConfig.ordUrl;
+      this.config.registration.endpoints.ordinalsApi = networkConfig.ordUrl;
+      
+      // Add creator address to registration config
+      if (networkConfig.creatorAddress) {
+        this.config.registration.creatorAddress = networkConfig.creatorAddress;
+        this.config.registration.fees.creatorWallet = networkConfig.creatorAddress;
+      }
+      
+      // Get network-specific endpoints
+      const endpoints = getEndpoints(networkConfig.network, networkConfig.ordUrl);
+      this.config.registration.endpoints.metadata = endpoints.metadata;
+      this.config.registration.endpoints.children = endpoints.children;
+      this.config.registration.endpoints.inscription = endpoints.inscription;
+      this.config.registration.endpoints.content = endpoints.content;
+    } catch (error) {
+      // Re-throw all errors from network configuration
+      if (error instanceof Error) {
+        throw error;
+      }
+      // Fall back to legacy environment variables for backward compatibility
+      if (process.env['BITCOIN_NETWORK']) {
+        const network = process.env['BITCOIN_NETWORK'];
+        if (!['mainnet', 'testnet', 'signet', 'regtest'].includes(network)) {
+          throw new Error(`Invalid Bitcoin network: ${network}`);
+        }
+        this.config.network.bitcoin = network as BitcoinNetwork;
+      }
+    }
+
+    // Apply ordinals API URL (legacy support)
     if (process.env['ORDINALS_API_URL']) {
       this.config.registration.endpoints.ordinalsApi = process.env['ORDINALS_API_URL'];
       this.config.network.ordinalsApiUrl = process.env['ORDINALS_API_URL'];
@@ -153,13 +215,30 @@ class ConfigManager {
       this.config.cache.status.ttl = ttl;
     }
 
-    // Apply Bitcoin network
-    if (process.env['BITCOIN_NETWORK']) {
-      const network = process.env['BITCOIN_NETWORK'];
-      if (!['mainnet', 'testnet', 'signet', 'regtest'].includes(network)) {
-        throw new Error(`Invalid Bitcoin network: ${network}`);
+    // Apply server settings for test compatibility
+    if (process.env['PORT']) {
+      if (!this.config.server) {
+        this.config.server = {
+          port: 3000,
+          cors: { origin: '*' }
+        };
       }
-      this.config.network.bitcoin = network as 'mainnet' | 'testnet' | 'signet' | 'regtest';
+      this.config.server.port = parseInt(process.env['PORT'], 10);
+    }
+
+    if (process.env['CORS_ORIGIN']) {
+      if (!this.config.server) {
+        this.config.server = {
+          port: 3000,
+          cors: { origin: '*' }
+        };
+      }
+      this.config.server.cors.origin = process.env['CORS_ORIGIN'];
+    }
+
+    // Apply JWT settings for test compatibility
+    if (process.env['JWT_SECRET']) {
+      this.config.jwt = { secret: process.env['JWT_SECRET'] };
     }
   }
 
