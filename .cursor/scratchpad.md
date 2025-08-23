@@ -727,6 +727,40 @@ All Embers Core Deployment tasks have been successfully completed:
 - `.cursor/scratchpad-history-phase1.md`
 - `.cursor/scratchpad-history-infrastructure.md`
 
+## Refactoring Notes - S5.3 Loader Fallback (2025-08-22)
+
+### Completed
+- Implemented multi-source fallback loader: inscription -> CDN -> local bundle
+- Added comprehensive error reporting with URL and hints
+- Timeout handling with AbortController
+
+### Potential Refactoring
+- Consider memoization for repeated load attempts
+- Add telemetry hooks for monitoring source usage
+- Make source order configurable
+- Extract timeout logic to a shared utility
+- Consider adding retry logic with exponential backoff
+- Add progress callbacks for UI feedback during loading
+
+## Refactoring Notes - S5.2 Deployment Verification (2025-08-22)
+
+### Completed
+- Implemented deployment verification script with SHA-256 checksums
+- Added rich logging with txid, inscription ID, byte length, and checksum
+- Network errors retry with exponential backoff
+- Support for JSON output and CLI arguments
+- Environment variable fallback for inscription IDs
+
+### Potential Refactoring
+- Integrate with actual ord CLI when available
+- Add support for verifying multiple inscriptions in batch
+- Implement caching of verified inscriptions
+- Add metrics/telemetry for deployment verification
+- Support for different hash algorithms (SHA-512, etc.)
+- Add verification against expected content patterns/version
+- Integrate with CI/CD pipeline for automated verification
+- Add support for content integrity metadata in inscriptions
+
 ## Planner: Refactor Prioritization for Signet Core Embers Test (Now vs Later)
 
 ### Goal Alignment
